@@ -1,12 +1,14 @@
-use std::{env, path};
-
 use env_logger;
 use ggez::{
-    self, conf, conf::FullscreenType, event, event::EventHandler, event::KeyMods, filesystem,
-    graphics, graphics::DrawParam, graphics::Text, input::keyboard::KeyCode, mint::Point2, timer,
-    Context, ContextBuilder, GameResult,
+    self, conf,
+    event::{self, EventHandler, KeyMods},
+    graphics::{self, Text},
+    input::keyboard::KeyCode,
+    mint::Point2,
+    timer, Context, ContextBuilder, GameResult,
 };
 use log;
+use std::{env, path};
 
 fn main() -> GameResult {
     env_logger::init_from_env(
@@ -30,14 +32,6 @@ fn main() -> GameResult {
 
     let (ctx, event_loop) = &mut cb.build()?;
 
-    if let Ok(_conf) = filesystem::read_config(ctx) {
-        log::info!("found existing conf file");
-    } else {
-        log::info!("no existing conf file found, saving one out");
-        let c = conf::Conf::new();
-        filesystem::write_config(ctx, &c)?;
-    }
-
     graphics::set_screen_coordinates(ctx, graphics::Rect::new(0.0, 0.0, 1280.0, 720.0)).unwrap();
 
     let game = &mut Tetris::new(ctx)?;
@@ -47,8 +41,6 @@ fn main() -> GameResult {
 struct WindowSettings {
     toggle_fullscreen: bool,
     is_fullscreen: bool,
-    toggle_vsync: bool,
-    is_vsync: bool,
 }
 
 struct Tetris {
@@ -63,8 +55,6 @@ impl Tetris {
             window_settings: WindowSettings {
                 toggle_fullscreen: false,
                 is_fullscreen: false,
-                toggle_vsync: false,
-                is_vsync: false,
             },
         })
     }
@@ -78,11 +68,9 @@ impl EventHandler for Tetris {
             } else {
                 conf::FullscreenType::Windowed
             };
-            ggez::graphics::set_fullscreen(ctx, fullscreen_type)?;
+            graphics::set_fullscreen(ctx, fullscreen_type)?;
             self.window_settings.toggle_fullscreen = false;
         }
-
-        if self.window_settings.toggle_vsync {}
 
         Ok(())
     }
@@ -107,6 +95,7 @@ impl EventHandler for Tetris {
                 self.window_settings.toggle_fullscreen = true;
                 self.window_settings.is_fullscreen = !self.window_settings.is_fullscreen;
             }
+
             _ => (),
         }
     }
