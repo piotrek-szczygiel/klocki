@@ -41,6 +41,22 @@
         "kind": "test",
         "isDefault": true
       }
+    },
+    {
+      "label": "format",
+      "type": "shell",
+      "command": "cargo fmt",
+      "presentation": {
+        "echo": false,
+        "reveal": "never",
+        "focus": false,
+        "panel": "shared",
+        "showReuseMessage": true,
+        "clear": false
+      },
+      "problemMatcher": [
+        "$rustc"
+      ]
     }
   ]
 }
