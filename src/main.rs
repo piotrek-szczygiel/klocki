@@ -1,4 +1,5 @@
 #![allow(dead_code)]
+
 mod bag;
 mod game;
 mod matrix;
@@ -11,7 +12,6 @@ use ggez::*;
 use input::keyboard::KeyCode;
 use log;
 use nalgebra::Point2;
-use std::{env, path};
 
 fn main() -> GameResult {
     env_logger::init_from_env(
@@ -20,18 +20,10 @@ fn main() -> GameResult {
             .write_style_or("MY_LOG_STYLE", "always"),
     );
 
-    let resource_dir = if let Ok(manifest_dir) = env::var("CARGO_MANIFEST_DIR") {
-        let mut path = path::PathBuf::from(manifest_dir);
-        path.push("resources");
-        path
-    } else {
-        path::PathBuf::from("./resources")
-    };
-
     let cb = ContextBuilder::new("tetris", "piotrek-szczygiel")
         .window_setup(conf::WindowSetup::default().title("Tetris").vsync(false))
         .window_mode(conf::WindowMode::default().dimensions(1600.0, 900.0))
-        .add_resource_path(resource_dir);
+        .add_zipfile_bytes(include_bytes!("../resources.zip").to_vec());
 
     let (ctx, event_loop) = &mut cb.build()?;
 

@@ -9,3 +9,7 @@ log = "0.4.8"
 env_logger = "0.6.2"
 ggez = "0.5.1"
 rand = "0.7.0"
+
+[build-dependencies]
+walkdir = "2.2.9"
+zip = "0.5.3"

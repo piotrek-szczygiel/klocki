@@ -6,6 +6,7 @@ use ggez::*;
 
 pub struct Game {
     matrix: Matrix,
+    bag: Bag,
     background: graphics::Image,
     grid: graphics::Mesh,
 }
@@ -35,17 +36,14 @@ impl Game {
             )?;
         }
 
-        let background = graphics::Image::new(ctx, "/background.png")?;
+        let background = graphics::Image::new(ctx, "background.png")?;
         let grid = grid.build(ctx)?;
         let matrix = Matrix::new(ctx)?;
-
         let bag = Bag::new();
-        for shape in bag.peek(14) {
-            println!("{:?}", shape.shape_type);
-        }
 
         Ok(Game {
             grid,
+            bag,
             background,
             matrix,
         })
