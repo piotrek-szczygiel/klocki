@@ -28,6 +28,7 @@ fn main() -> GameResult {
     );
 
     let cb = ContextBuilder::new("tetris", "piotrek-szczygiel")
+        .with_conf_file(false)
         .window_setup(
             conf::WindowSetup::default()
                 .title("Tetris")
@@ -98,48 +99,30 @@ impl EventHandler for Tetris {
             self.window_settings.toggle_fullscreen = false;
         }
 
-        self.game.update(ctx)
+        self.game.update(ctx, &mut self.imgui_wrapper.state)?;
+
+        Ok(())
     }
 
     fn draw(&mut self, ctx: &mut Context) -> GameResult<()> {
+        graphics::clear(ctx, graphics::WHITE);
+
         self.game.draw(ctx)?;
 
-        let fps = timer::fps(ctx) as i32;
-        let fps = Text::new(TextFragment {
-            text: format!("FPS: {}", fps),
-            color: Some(Color::new(0.5, 0.0, 0.0, 1.0)),
-            font: Some(Font::default()),
-            scale: Some(Scale::uniform(16.0)),
-        });
+        {
+            let fps = timer::fps(ctx) as i32;
+            let fps = Text::new(TextFragment {
+                text: format!("FPS: {}", fps),
+                color: Some(Color::new(1.0, 0.0, 0.0, 0.5)),
+                font: Some(Font::default()),
+                scale: Some(Scale::uniform(16.0)),
+            });
 
-        graphics::draw(ctx, &fps, DrawParam::new().dest(Point2::new(10.0, 30.0)))?;
-
-        self.imgui_wrapper.render(ctx);
-
-        let pos = utils::mouse_position_coords(ctx);
-        if self.cursor.last_position == pos {
-            self.cursor.duration_static += utils::dt(ctx);
-        } else {
-            self.cursor.duration_static = 0.0;
+            graphics::draw(ctx, &fps, DrawParam::new().dest(Point2::new(10.0, 30.0)))?;
         }
 
-        self.cursor.last_position = pos;
-
-        let transparency = if self.cursor.duration_static > 3.0 {
-            0.0
-        } else if self.cursor.duration_static > 1.0 {
-            1.0 - (self.cursor.duration_static - 1.0)
-        } else {
-            1.0
-        };
-
-        graphics::draw(
-            ctx,
-            &self.cursor.image,
-            DrawParam::new()
-                .dest(pos)
-                .color(Color::new(1.0, 1.0, 1.0, transparency)),
-        )?;
+        self.imgui_wrapper.draw(ctx);
+        self.cursor.draw(ctx)?;
 
         graphics::present(ctx)?;
 
@@ -195,5 +178,36 @@ impl EventHandler for Tetris {
         _y: f32,
     ) {
         self.imgui_wrapper.update_mouse_down((false, false, false));
+    }
+}
+
+impl Cursor {
+    fn draw(&mut self, ctx: &mut Context) -> GameResult {
+        let pos = utils::mouse_position_coords(ctx);
+        if self.last_position == pos {
+            self.duration_static += utils::dt(ctx);
+        } else {
+            self.duration_static = 0.0;
+        }
+
+        self.last_position = pos;
+
+        let transparency = if self.duration_static > 3.0 {
+            0.0
+        } else if self.duration_static > 1.0 {
+            1.0 - (self.duration_static - 1.0)
+        } else {
+            1.0
+        };
+
+        graphics::draw(
+            ctx,
+            &self.image,
+            DrawParam::new()
+                .dest(pos)
+                .color(Color::new(1.0, 1.0, 1.0, transparency)),
+        )?;
+
+        Ok(())
     }
 }

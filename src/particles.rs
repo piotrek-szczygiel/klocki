@@ -8,7 +8,7 @@ use ggez::{
 
 use crate::utils;
 
-const MOUSE_THRESHOLD: f32 = 100.0;
+const MOUSE_THRESHOLD: f32 = 200.0;
 
 struct Particle {
     position: Point2<f32>,

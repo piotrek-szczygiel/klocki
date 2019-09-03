@@ -14,12 +14,17 @@ struct MouseState {
     wheel: f32,
 }
 
+pub struct State {
+    pub debug_t_spin_tower: bool,
+}
+
 pub struct ImGuiWrapper {
     pub imgui: imgui::Context,
     pub renderer: Renderer<gfx_core::format::Rgba8, gfx_device_gl::Resources>,
+    pub state: State,
     last_frame: Instant,
     mouse_state: MouseState,
-    show_window: bool,
+    show_debug_window: bool,
 }
 
 impl ImGuiWrapper {
@@ -49,13 +54,16 @@ impl ImGuiWrapper {
         Self {
             imgui,
             renderer,
+            state: State {
+                debug_t_spin_tower: false,
+            },
             last_frame: Instant::now(),
             mouse_state: MouseState::default(),
-            show_window: false,
+            show_debug_window: false,
         }
     }
 
-    pub fn render(&mut self, ctx: &mut ggez::Context) {
+    pub fn draw(&mut self, ctx: &mut ggez::Context) {
         self.update_mouse();
 
         let now = Instant::now();
@@ -71,22 +79,20 @@ impl ImGuiWrapper {
         let ui = self.imgui.frame();
 
         {
-            if self.show_window {
-                ui.window(im_str!("Hello world"))
+            let mut state = State {
+                debug_t_spin_tower: false,
+            };
+
+            if self.show_debug_window {
+                ui.window(im_str!("Debug"))
                     .size([300.0, 600.0], imgui::Condition::FirstUseEver)
                     .position([100.0, 100.0], imgui::Condition::FirstUseEver)
                     .build(|| {
-                        ui.text(im_str!("Hello world!"));
+                        ui.text(im_str!("Debugging"));
                         ui.separator();
-                        let mouse_pos = ui.io().mouse_pos;
-                        ui.text(im_str!(
-                            "Mouse Position: ({:.1},{:.1})",
-                            mouse_pos[0],
-                            mouse_pos[1]
-                        ));
 
-                        if ui.small_button(im_str!("small button")) {
-                            println!("Small button clicked");
+                        if ui.small_button(im_str!("T-Spin tower")) {
+                            state.debug_t_spin_tower = true;
                         }
                     });
             }
@@ -98,6 +104,8 @@ impl ImGuiWrapper {
                     }
                 });
             });
+
+            self.state = state;
         }
 
         let (factory, _, encoder, _, render_target) = graphics::gfx_objects(ctx);
@@ -137,6 +145,6 @@ impl ImGuiWrapper {
     }
 
     pub fn toggle_window(&mut self) {
-        self.show_window = !self.show_window;
+        self.show_debug_window = !self.show_debug_window;
     }
 }
