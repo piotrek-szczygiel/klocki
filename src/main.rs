@@ -32,7 +32,7 @@ fn main() -> GameResult {
         .window_setup(
             conf::WindowSetup::default()
                 .title("Tetris")
-                .samples(conf::NumSamples::Sixteen)
+                .samples(conf::NumSamples::Four)
                 .vsync(false),
         )
         .window_mode(conf::WindowMode::default().dimensions(1600.0, 900.0))

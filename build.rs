@@ -1,16 +1,18 @@
-use std::io::prelude::*;
-use std::io::{Seek, Write};
-use std::iter::Iterator;
-use zip::result::ZipError;
-use zip::write::FileOptions;
+use std::{
+    fs::{self, File},
+    io::{prelude::*, Seek, Write},
+    iter::Iterator,
+    path::Path,
+};
 
-use std::fs::File;
-use std::path::Path;
 use walkdir::{DirEntry, WalkDir};
+use zip::{result::ZipError, write::FileOptions};
 
 fn main() {
     let src_dir = "resources";
     let dst_file = "resources.zip";
+
+    let _ = fs::remove_file(Path::new(dst_file));
 
     let method = zip::CompressionMethod::Deflated;
 
