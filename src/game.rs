@@ -48,7 +48,7 @@ impl Game {
 
         self.particle_animation.draw(ctx)?;
 
-        self.matrix.draw(ctx, Point2::new(100.0, 100.0))?;
+        self.matrix.draw(ctx, Point2::new(200.0, 200.0))?;
 
         Ok(())
     }

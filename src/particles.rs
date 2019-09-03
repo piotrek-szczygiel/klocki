@@ -148,18 +148,11 @@ impl ParticleAnimation {
     }
 
     pub fn draw(&mut self, ctx: &mut Context) -> GameResult<()> {
-        let mut mesh = MeshBuilder::new();
+        let mut mesh_lines = MeshBuilder::new();
+        let mut mesh_circles = MeshBuilder::new();
 
         for i in 0..self.particles.len() {
             let particle = &self.particles[i];
-
-            mesh.circle(
-                DrawMode::fill(),
-                particle.position,
-                particle.size,
-                0.1,
-                particle.color,
-            );
 
             for j in 0..i {
                 let p1 = &self.particles[i];
@@ -170,17 +163,28 @@ impl ParticleAnimation {
                 if distance < self.threshold {
                     let color = 0.3 - distance / self.threshold * 0.3;
 
-                    mesh.line(
+                    mesh_lines.line(
                         &[p1.position, p2.position],
                         (p1.size + p2.size) / 4.0,
                         Color::new(color, color, color, 1.0),
                     )?;
                 }
             }
+
+            mesh_circles.circle(
+                DrawMode::fill(),
+                particle.position,
+                particle.size,
+                0.1,
+                particle.color,
+            );
         }
 
-        let mesh = mesh.build(ctx)?;
-        graphics::draw(ctx, &mesh, DrawParam::new())?;
+        let mesh_lines = mesh_lines.build(ctx)?;
+        graphics::draw(ctx, &mesh_lines, DrawParam::new())?;
+
+        let mesh_circles = mesh_circles.build(ctx)?;
+        graphics::draw(ctx, &mesh_circles, DrawParam::new())?;
 
         Ok(())
     }

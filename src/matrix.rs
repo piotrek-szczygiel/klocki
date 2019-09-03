@@ -1,5 +1,5 @@
 use ggez::{
-    graphics::{self, DrawParam, Image, Mesh},
+    graphics::{self, spritebatch::SpriteBatch, DrawParam, Image, Mesh, Rect},
     nalgebra::Point2,
     Context, GameResult,
 };
@@ -17,7 +17,7 @@ pub struct Matrix {
     grid: Grid,
     grid_mesh: Mesh,
     outline_image: Image,
-    block_images: [Image; 7],
+    blocks: SpriteBatch,
 }
 
 impl Matrix {
@@ -25,7 +25,7 @@ impl Matrix {
         let grid_mesh = &mut graphics::MeshBuilder::new();
         let grid_color = graphics::Color::new(0.3, 0.3, 0.3, 0.5);
 
-        for x in 1..=9 {
+        for x in 0..=WIDTH {
             let x = x as f32 * BLOCK_SIZE;
 
             grid_mesh.line(
@@ -38,7 +38,7 @@ impl Matrix {
             )?;
         }
 
-        for y in 1..=19 {
+        for y in 0..=HEIGHT {
             let y = y as f32 * BLOCK_SIZE;
 
             grid_mesh.line(
@@ -57,15 +57,7 @@ impl Matrix {
             grid: [[0; WIDTH]; HEIGHT + VANISH],
             grid_mesh,
             outline_image: Image::new(ctx, "outline.png")?,
-            block_images: [
-                Image::new(ctx, "block_I.png")?,
-                Image::new(ctx, "block_J.png")?,
-                Image::new(ctx, "block_L.png")?,
-                Image::new(ctx, "block_O.png")?,
-                Image::new(ctx, "block_S.png")?,
-                Image::new(ctx, "block_T.png")?,
-                Image::new(ctx, "block_Z.png")?,
-            ],
+            blocks: SpriteBatch::new(Image::new(ctx, "blocks.png")?),
         })
     }
 
@@ -120,12 +112,14 @@ impl Matrix {
 }
 
 impl Matrix {
-    pub fn draw(&self, ctx: &mut Context, position: Point2<f32>) -> GameResult {
-        // graphics::draw(
-        //     ctx,
-        //     &self.grid_mesh,
-        //     graphics::DrawParam::new().dest(position),
-        // )?;
+    pub fn draw(&mut self, ctx: &mut Context, position: Point2<f32>) -> GameResult {
+        graphics::draw(
+            ctx,
+            &self.grid_mesh,
+            graphics::DrawParam::new().dest(position),
+        )?;
+
+        self.blocks.clear();
 
         for y in 0..HEIGHT {
             for x in 0..WIDTH {
@@ -134,19 +128,18 @@ impl Matrix {
                     continue;
                 }
 
-                let block_index = block - 1;
+                let src = Rect::new((block - 1) as f32 / 7.0, 0.0, 1.0 / 7.0, 1.0);
 
-                graphics::draw(
-                    ctx,
-                    &self.block_images[block_index],
-                    DrawParam::new().dest(Point2::new(
-                        position[0] + x as f32 * BLOCK_SIZE,
-                        position[1] + HEIGHT as f32 * BLOCK_SIZE - y as f32 * BLOCK_SIZE,
-                    )),
-                )?;
+                let dest = Point2::new(
+                    position[0] + x as f32 * BLOCK_SIZE,
+                    position[1] + HEIGHT as f32 * BLOCK_SIZE - y as f32 * BLOCK_SIZE,
+                );
+
+                self.blocks.add(DrawParam::new().src(src).dest(dest));
             }
         }
 
+        graphics::draw(ctx, &self.blocks, DrawParam::new())?;
         Ok(())
     }
 }
