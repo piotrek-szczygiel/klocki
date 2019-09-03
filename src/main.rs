@@ -4,6 +4,7 @@ mod bag;
 mod game;
 mod imgui_wrapper;
 mod matrix;
+mod particles;
 mod shape;
 
 use env_logger;
@@ -24,7 +25,12 @@ fn main() -> GameResult {
     );
 
     let cb = ContextBuilder::new("tetris", "piotrek-szczygiel")
-        .window_setup(conf::WindowSetup::default().title("Tetris").vsync(false))
+        .window_setup(
+            conf::WindowSetup::default()
+                .title("Tetris")
+                .samples(conf::NumSamples::Sixteen)
+                .vsync(false),
+        )
         .window_mode(conf::WindowMode::default().dimensions(1600.0, 900.0))
         .add_zipfile_bytes(include_bytes!("../resources.zip").to_vec());
 

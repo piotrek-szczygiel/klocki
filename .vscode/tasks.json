@@ -18,7 +18,7 @@
         {
             "label": "run",
             "type": "shell",
-            "command": "cargo run",
+            "command": "cargo run --release",
             "problemMatcher": [
                 "$rustc"
             ]

@@ -1,5 +1,6 @@
 use crate::bag::Bag;
 use crate::matrix::Matrix;
+use crate::particles::ParticleAnimation;
 
 use ggez::nalgebra::Point2;
 use ggez::*;
@@ -7,6 +8,7 @@ use ggez::*;
 pub struct Game {
     matrix: Matrix,
     bag: Bag,
+    particle_animation: ParticleAnimation,
     background: graphics::Image,
     grid: graphics::Mesh,
 }
@@ -41,26 +43,35 @@ impl Game {
         let matrix = Matrix::new(ctx)?;
         let bag = Bag::new();
 
+        let rect = graphics::screen_coordinates(ctx);
+        let particle_animation = ParticleAnimation::new(100, 200.0, 70.0, rect.w, rect.h);
+
         Ok(Game {
             grid,
             bag,
+            particle_animation,
             background,
             matrix,
         })
     }
 
-    pub fn update(&mut self, _ctx: &mut Context) -> GameResult<()> {
+    pub fn update(&mut self, ctx: &mut Context) -> GameResult<()> {
+        self.particle_animation.update(ctx)?;
+
         Ok(())
     }
 
     pub fn draw(&mut self, ctx: &mut Context) -> GameResult<()> {
-        graphics::draw(ctx, &self.background, graphics::DrawParam::new())?;
+        // graphics::draw(ctx, &self.background, graphics::DrawParam::new())?;
+        graphics::clear(ctx, graphics::BLACK);
 
-        graphics::draw(
-            ctx,
-            &self.grid,
-            graphics::DrawParam::new().dest(Point2::new(205.0, 200.0)),
-        )?;
+        self.particle_animation.draw(ctx)?;
+
+        // graphics::draw(
+        //     ctx,
+        //     &self.grid,
+        //     graphics::DrawParam::new().dest(Point2::new(205.0, 200.0)),
+        // )?;
 
         Ok(())
     }
