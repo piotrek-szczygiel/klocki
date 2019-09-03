@@ -2,15 +2,18 @@ use crate::bag::Bag;
 use crate::matrix::Matrix;
 use crate::particles::ParticleAnimation;
 
-use ggez::nalgebra::Point2;
-use ggez::*;
+use ggez::{
+    graphics::{self, Image, Mesh},
+    nalgebra::Point2,
+    Context, GameResult,
+};
 
 pub struct Game {
     matrix: Matrix,
     bag: Bag,
     particle_animation: ParticleAnimation,
-    background: graphics::Image,
-    grid: graphics::Mesh,
+    background: Image,
+    grid: Mesh,
 }
 
 impl Game {
@@ -62,8 +65,8 @@ impl Game {
     }
 
     pub fn draw(&mut self, ctx: &mut Context) -> GameResult<()> {
-        // graphics::draw(ctx, &self.background, graphics::DrawParam::new())?;
         graphics::clear(ctx, graphics::BLACK);
+        graphics::draw(ctx, &self.background, graphics::DrawParam::new())?;
 
         self.particle_animation.draw(ctx)?;
 

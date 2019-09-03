@@ -1,9 +1,12 @@
 use rand_distr::{Distribution, Normal, Uniform};
 
-use ggez::graphics::*;
-use ggez::*;
+use ggez::{
+    graphics::{self, Color, DrawMode, DrawParam, MeshBuilder},
+    nalgebra::{self, Point2, Vector2},
+    Context, GameResult,
+};
 
-use nalgebra::{Point2, Vector2};
+use crate::utils;
 
 const MOUSE_THRESHOLD: f32 = 100.0;
 
@@ -92,12 +95,8 @@ impl ParticleAnimation {
     }
 
     pub fn update(&mut self, ctx: &mut Context) -> GameResult<()> {
-        let dt = timer::delta(ctx).as_nanos() as f32 * 1e-9;
-
-        let (w, h) = graphics::size(ctx);
-        let Rect { w: cw, h: ch, .. } = graphics::screen_coordinates(ctx);
-        let pos = input::mouse::position(ctx);
-        let pos = Point2::new(pos.x * cw / w, pos.y * ch / h);
+        let dt = utils::dt(ctx);
+        let pos = utils::mouse_position_coords(ctx);
 
         for particle in &mut self.particles {
             let speed = dt * self.max_speed;

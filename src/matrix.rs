@@ -1,5 +1,4 @@
-use ggez::graphics::*;
-use ggez::*;
+use ggez::{graphics::Image, Context, GameResult};
 
 const WIDTH: usize = 10;
 const HEIGHT: usize = 20;
@@ -78,19 +77,7 @@ impl Matrix {
 }
 
 impl Matrix {
-    fn draw(&self, _ctx: &mut Context, _param: DrawParam) -> GameResult {
+    fn draw(&self, _ctx: &mut Context) -> GameResult {
         Ok(())
     }
-
-    fn dimensions(&self, _: &mut Context) -> Option<graphics::Rect> {
-        Some(self.block_images[0].dimensions())
-    }
-
-    // fn set_blend_mode(&mut self, mode: Option<BlendMode>) {
-    //     self.blend_mode = mode;
-    // }
-
-    // fn blend_mode(&self) -> Option<BlendMode> {
-    //     self.blend_mode
-    // }
 }

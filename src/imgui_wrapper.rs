@@ -1,14 +1,11 @@
-use ggez::graphics;
-use ggez::Context;
+use std::time::Instant;
 
 use gfx_core::{handle::RenderTargetView, memory::Typed};
-
 use gfx_device_gl;
+use ggez::graphics;
 
-use imgui::*;
-use imgui_gfx_renderer::*;
-
-use std::time::Instant;
+use imgui::{self, im_str};
+use imgui_gfx_renderer::{Renderer, Shaders};
 
 #[derive(Copy, Clone, PartialEq, Debug, Default)]
 struct MouseState {
@@ -26,7 +23,7 @@ pub struct ImGuiWrapper {
 }
 
 impl ImGuiWrapper {
-    pub fn new(ctx: &mut Context) -> Self {
+    pub fn new(ctx: &mut ggez::Context) -> Self {
         let mut imgui = imgui::Context::create();
         let (factory, gfx_device, _, _, _) = graphics::gfx_objects(ctx);
 
@@ -58,7 +55,7 @@ impl ImGuiWrapper {
         }
     }
 
-    pub fn render(&mut self, ctx: &mut Context) {
+    pub fn render(&mut self, ctx: &mut ggez::Context) {
         self.update_mouse();
 
         let now = Instant::now();

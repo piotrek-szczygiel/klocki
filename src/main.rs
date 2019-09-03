@@ -6,16 +6,19 @@ mod imgui_wrapper;
 mod matrix;
 mod particles;
 mod shape;
+mod utils;
 
 use env_logger;
-use ggez::event::{self, EventHandler, KeyMods, MouseButton};
-use ggez::graphics::{self, DrawParam, Text};
-use ggez::*;
-use input::keyboard::KeyCode;
 use log;
-use nalgebra::Point2;
 
-use crate::imgui_wrapper::ImGuiWrapper;
+use ggez::{
+    conf,
+    event::{self, EventHandler, KeyMods, MouseButton},
+    graphics::{self, Color, DrawParam, Font, Image, Scale, Text, TextFragment},
+    input::{self, keyboard::KeyCode},
+    nalgebra::Point2,
+    timer, Context, ContextBuilder, GameResult,
+};
 
 fn main() -> GameResult {
     env_logger::init_from_env(
@@ -37,11 +40,18 @@ fn main() -> GameResult {
     let (ctx, event_loop) = &mut cb.build()?;
 
     graphics::set_screen_coordinates(ctx, graphics::Rect::new(0.0, 0.0, 1920.0, 1080.0))?;
+    input::mouse::set_cursor_hidden(ctx, true);
 
     let game = &mut Tetris::new(ctx)?;
 
     log::info!("starting the event loop");
     event::run(ctx, event_loop, game)
+}
+
+struct Cursor {
+    image: Image,
+    last_position: Point2<f32>,
+    duration_static: f32,
 }
 
 struct WindowSettings {
@@ -52,7 +62,8 @@ struct WindowSettings {
 struct Tetris {
     window_settings: WindowSettings,
     game: game::Game,
-    imgui_wrapper: ImGuiWrapper,
+    imgui_wrapper: imgui_wrapper::ImGuiWrapper,
+    cursor: Cursor,
 }
 
 impl Tetris {
@@ -62,14 +73,15 @@ impl Tetris {
             is_fullscreen: false,
         };
 
-        let game = game::Game::new(ctx)?;
-
-        let imgui_wrapper = ImGuiWrapper::new(ctx);
-
         Ok(Tetris {
             window_settings,
-            game,
-            imgui_wrapper,
+            game: game::Game::new(ctx)?,
+            imgui_wrapper: imgui_wrapper::ImGuiWrapper::new(ctx),
+            cursor: Cursor {
+                image: Image::new(ctx, "cursor.png")?,
+                last_position: Point2::new(0.0, 0.0),
+                duration_static: 0.0,
+            },
         })
     }
 }
@@ -93,14 +105,41 @@ impl EventHandler for Tetris {
         self.game.draw(ctx)?;
 
         let fps = timer::fps(ctx) as i32;
-        let fps_display = Text::new(format!("FPS: {}", fps));
-        graphics::draw(
-            ctx,
-            &fps_display,
-            DrawParam::new().dest(Point2::new(10.0, 30.0)),
-        )?;
+        let fps = Text::new(TextFragment {
+            text: format!("FPS: {}", fps),
+            color: Some(Color::new(0.5, 0.0, 0.0, 1.0)),
+            font: Some(Font::default()),
+            scale: Some(Scale::uniform(16.0)),
+        });
+
+        graphics::draw(ctx, &fps, DrawParam::new().dest(Point2::new(10.0, 30.0)))?;
 
         self.imgui_wrapper.render(ctx);
+
+        let pos = utils::mouse_position_coords(ctx);
+        if self.cursor.last_position == pos {
+            self.cursor.duration_static += utils::dt(ctx);
+        } else {
+            self.cursor.duration_static = 0.0;
+        }
+
+        self.cursor.last_position = pos;
+
+        let transparency = if self.cursor.duration_static > 3.0 {
+            0.0
+        } else if self.cursor.duration_static > 1.0 {
+            1.0 - (self.cursor.duration_static - 1.0)
+        } else {
+            1.0
+        };
+
+        graphics::draw(
+            ctx,
+            &self.cursor.image,
+            DrawParam::new()
+                .dest(pos)
+                .color(Color::new(1.0, 1.0, 1.0, transparency)),
+        )?;
 
         graphics::present(ctx)?;
 

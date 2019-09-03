@@ -1,5 +1,6 @@
-use crate::shape::Shape;
 use rand::{seq::SliceRandom, thread_rng};
+
+use crate::shape::Shape;
 
 pub struct Bag {
     bag: Vec<Shape>,
