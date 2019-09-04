@@ -1,4 +1,5 @@
 use std::{
+    env,
     fs::{self, File},
     io::{prelude::*, Seek, Write},
     iter::Iterator,
@@ -9,6 +10,14 @@ use walkdir::{DirEntry, WalkDir};
 use zip::{result::ZipError, write::FileOptions};
 
 fn main() {
+    let profile = env::var("PROFILE").unwrap();
+    println!("cargo:rustc-cfg=build={:?}", &profile);
+
+    // Don't create zip file on debug mode
+    if profile == "debug" {
+        return;
+    }
+
     let src_dir = "resources";
     let dst_file = "resources.zip";
 
@@ -18,7 +27,10 @@ fn main() {
 
     match compress(src_dir, dst_file, method) {
         Ok(_) => println!("done: {} written to {}", src_dir, dst_file),
-        Err(e) => println!("error: {:?}", e),
+        Err(e) => {
+            println!("error: {:?}", e);
+            std::process::exit(1);
+        }
     }
 }
 

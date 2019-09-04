@@ -16,3 +16,13 @@ pub fn mouse_position_coords(ctx: &mut Context) -> Point2<f32> {
 pub fn dt(ctx: &mut Context) -> f32 {
     timer::duration_to_f64(timer::delta(ctx)) as f32
 }
+
+#[cfg(build = "release")]
+pub fn path(path: &str) -> String {
+    String::from(path)
+}
+
+#[cfg(build = "debug")]
+pub fn path(path: &str) -> String {
+    String::from("/") + path
+}
