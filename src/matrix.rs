@@ -16,7 +16,6 @@ type Grid = [[usize; WIDTH]; HEIGHT + VANISH];
 pub struct Matrix {
     grid: Grid,
     grid_mesh: Mesh,
-    outline_image: Image,
     blocks: SpriteBatch,
 }
 
@@ -56,7 +55,6 @@ impl Matrix {
         Ok(Matrix {
             grid: [[0; WIDTH]; HEIGHT + VANISH],
             grid_mesh,
-            outline_image: Image::new(ctx, "outline.png")?,
             blocks: SpriteBatch::new(Image::new(ctx, "blocks.png")?),
         })
     }
