@@ -43,14 +43,18 @@ fn main() -> GameResult {
         .window_mode(conf::WindowMode::default().dimensions(1600.0, 900.0));
 
     // Read from resources directory on debug mode
-    // Read from baked in zip file on release mode
-    if cfg!(build = "debug") {
+    #[cfg(build = "debug")]
+    {
         let manifest_dir = env::var("CARGO_MANIFEST_DIR").unwrap();
         let mut path = path::PathBuf::from(manifest_dir);
         path.push("resources");
         log::debug!("DEBUG MODE: adding resources path {:?}", path);
         cb = cb.add_resource_path(path);
-    } else {
+    }
+
+    // Read from baked in zip file on release mode
+    #[cfg(build = "release")]
+    {
         log::debug!("RELEASE MODE: adding baked in zipped resources");
         cb = cb.add_zipfile_bytes(include_bytes!("../resources.zip").to_vec());
     }
