@@ -1,12 +1,17 @@
 #![allow(dead_code)]
 
 mod bag;
+mod blocks;
 mod game;
 mod imgui_wrapper;
 mod matrix;
 mod particles;
 mod shape;
 mod utils;
+
+use std::{env, path};
+
+use crate::imgui_wrapper::ImGuiWrapper;
 
 use env_logger;
 use log;
@@ -27,7 +32,7 @@ fn main() -> GameResult {
             .write_style_or("LOG_STYLE", "always"),
     );
 
-    let cb = ContextBuilder::new("tetris", "piotrek-szczygiel")
+    let mut cb = ContextBuilder::new("tetris", "piotrek-szczygiel")
         .with_conf_file(false)
         .window_setup(
             conf::WindowSetup::default()
@@ -35,8 +40,20 @@ fn main() -> GameResult {
                 .samples(conf::NumSamples::Four)
                 .vsync(false),
         )
-        .window_mode(conf::WindowMode::default().dimensions(1600.0, 900.0))
-        .add_zipfile_bytes(include_bytes!("../resources.zip").to_vec());
+        .window_mode(conf::WindowMode::default().dimensions(1600.0, 900.0));
+
+    // Read from resources directory on debug mode
+    // Read from baked in zip file on release mode
+    if cfg!(build = "debug") {
+        let manifest_dir = env::var("CARGO_MANIFEST_DIR").unwrap();
+        let mut path = path::PathBuf::from(manifest_dir);
+        path.push("resources");
+        log::debug!("DEBUG MODE: adding resources path {:?}", path);
+        cb = cb.add_resource_path(path);
+    } else {
+        log::debug!("RELEASE MODE: adding baked in zipped resources");
+        cb = cb.add_zipfile_bytes(include_bytes!("../resources.zip").to_vec());
+    }
 
     let (ctx, event_loop) = &mut cb.build()?;
 
@@ -74,12 +91,14 @@ impl Tetris {
             is_fullscreen: false,
         };
 
+        let imgui = ImGuiWrapper::new(ctx);
+
         Ok(Tetris {
             window_settings,
-            game: game::Game::new(ctx)?,
-            imgui_wrapper: imgui_wrapper::ImGuiWrapper::new(ctx),
+            game: game::Game::new(ctx, &imgui)?,
+            imgui_wrapper: imgui,
             cursor: Cursor {
-                image: Image::new(ctx, "cursor.png")?,
+                image: Image::new(ctx, utils::path("cursor.png"))?,
                 last_position: Point2::new(0.0, 0.0),
                 duration_static: 0.0,
             },
@@ -99,7 +118,7 @@ impl EventHandler for Tetris {
             self.window_settings.toggle_fullscreen = false;
         }
 
-        self.game.update(ctx, &mut self.imgui_wrapper.state)?;
+        self.game.update(ctx, &self.imgui_wrapper)?;
 
         Ok(())
     }
@@ -131,13 +150,13 @@ impl EventHandler for Tetris {
 
     fn key_down_event(
         &mut self,
-        ctx: &mut Context,
+        _ctx: &mut Context,
         keycode: KeyCode,
         _keymod: KeyMods,
         _repeat: bool,
     ) {
         if let KeyCode::Escape = keycode {
-            event::quit(ctx);
+            ()
         }
     }
 

@@ -323,13 +323,13 @@ impl Shape {
     pub fn get_all_shapes() -> Vec<Shape> {
         use ShapeType::*;
         vec![
-            Shape::new(I),
-            Shape::new(J),
+            Shape::new(Z),
             Shape::new(L),
             Shape::new(O),
             Shape::new(S),
+            Shape::new(I),
+            Shape::new(J),
             Shape::new(T),
-            Shape::new(Z),
         ]
     }
 }

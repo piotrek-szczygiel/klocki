@@ -1,11 +1,17 @@
-use std::time::Instant;
+use std::{path, time::Instant};
 
 use gfx_core::{handle::RenderTargetView, memory::Typed};
 use gfx_device_gl;
-use ggez::graphics;
+use ggez::{
+    filesystem,
+    graphics::{self, Image},
+    Context, GameResult,
+};
 
-use imgui::{self, im_str};
+use imgui::{self, im_str, ImStr, ImString};
 use imgui_gfx_renderer::{Renderer, Shaders};
+
+use crate::utils;
 
 #[derive(Copy, Clone, PartialEq, Debug, Default)]
 struct MouseState {
@@ -16,6 +22,8 @@ struct MouseState {
 
 pub struct State {
     pub debug_t_spin_tower: bool,
+    pub skin_switched: bool,
+    pub current_skin_id: usize,
 }
 
 pub struct ImGuiWrapper {
@@ -25,6 +33,8 @@ pub struct ImGuiWrapper {
     last_frame: Instant,
     mouse_state: MouseState,
     show_debug_window: bool,
+    skins: Vec<path::PathBuf>,
+    skins_im: Vec<ImString>,
 }
 
 impl ImGuiWrapper {
@@ -51,15 +61,43 @@ impl ImGuiWrapper {
 
         let renderer = Renderer::init(&mut imgui, &mut *factory, shaders).unwrap();
 
+        let mut skins: Vec<path::PathBuf> = vec![];
+        {
+            let skins_dir: Vec<_> = filesystem::read_dir(ctx, utils::path("blocks"))
+                .unwrap()
+                .collect();
+
+            for skin in skins_dir {
+                if skin.extension().is_none() {
+                    continue;
+                }
+
+                if skin.extension().unwrap() != "png" {
+                    continue;
+                }
+
+                skins.push(skin.clone());
+            }
+        }
+
+        let skins_im = skins
+            .iter()
+            .map(|s| ImString::from(String::from(s.file_name().unwrap().to_str().unwrap())))
+            .collect();
+
         Self {
             imgui,
             renderer,
             state: State {
                 debug_t_spin_tower: false,
+                skin_switched: false,
+                current_skin_id: 0,
             },
             last_frame: Instant::now(),
             mouse_state: MouseState::default(),
             show_debug_window: false,
+            skins,
+            skins_im,
         }
     }
 
@@ -79,8 +117,13 @@ impl ImGuiWrapper {
         let ui = self.imgui.frame();
 
         {
+            let skins_im_len = self.skins_im.len() as i32;
+            let skins_im: Vec<&ImStr> = self.skins_im.iter().map(|s| s.as_ref()).collect();
+
             let mut state = State {
                 debug_t_spin_tower: false,
+                skin_switched: false,
+                current_skin_id: self.state.current_skin_id,
             };
 
             if self.show_debug_window {
@@ -98,9 +141,17 @@ impl ImGuiWrapper {
             }
 
             ui.main_menu_bar(|| {
-                ui.menu(im_str!("Menu")).build(|| {
+                ui.menu(im_str!("File")).build(|| {
                     if ui.menu_item(im_str!("Quit")).build() {
                         ggez::event::quit(ctx);
+                    }
+                });
+
+                ui.menu(im_str!("Skin")).build(|| {
+                    let mut current_skin_id = state.current_skin_id as i32;
+                    if ui.list_box(im_str!(""), &mut current_skin_id, &skins_im, skins_im_len) {
+                        state.current_skin_id = current_skin_id as usize;
+                        state.skin_switched = true;
                     }
                 });
             });
@@ -146,5 +197,9 @@ impl ImGuiWrapper {
 
     pub fn toggle_window(&mut self) {
         self.show_debug_window = !self.show_debug_window;
+    }
+
+    pub fn tileset(&self, ctx: &mut Context) -> GameResult<Image> {
+        Image::new(ctx, &self.skins[self.state.current_skin_id])
     }
 }

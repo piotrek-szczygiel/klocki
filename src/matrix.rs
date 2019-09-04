@@ -1,5 +1,7 @@
+use crate::blocks::{Blocks, BLOCK_SIZE};
+
 use ggez::{
-    graphics::{self, spritebatch::SpriteBatch, DrawParam, Image, Mesh, Rect},
+    graphics::{self, Mesh},
     nalgebra::Point2,
     Context, GameResult,
 };
@@ -9,14 +11,11 @@ const WIDTH: usize = 10;
 const HEIGHT: usize = 20;
 const VANISH: usize = 20;
 
-const BLOCK_SIZE: f32 = 35.0;
-
 type Grid = [[usize; WIDTH]; HEIGHT + VANISH];
 
 pub struct Matrix {
     grid: Grid,
     grid_mesh: Mesh,
-    blocks: SpriteBatch,
 }
 
 impl Matrix {
@@ -25,12 +24,12 @@ impl Matrix {
         let grid_color = graphics::Color::new(0.3, 0.3, 0.3, 0.5);
 
         for x in 0..=WIDTH {
-            let x = x as f32 * BLOCK_SIZE;
+            let x = (x * BLOCK_SIZE) as f32;
 
             grid_mesh.line(
                 &[
                     Point2::new(x, 0.0),
-                    Point2::new(x, BLOCK_SIZE * HEIGHT as f32),
+                    Point2::new(x, (BLOCK_SIZE * HEIGHT) as f32),
                 ],
                 2.0,
                 grid_color,
@@ -38,12 +37,12 @@ impl Matrix {
         }
 
         for y in 0..=HEIGHT {
-            let y = y as f32 * BLOCK_SIZE;
+            let y = (y * BLOCK_SIZE) as f32;
 
             grid_mesh.line(
                 &[
                     Point2::new(0.0, y),
-                    Point2::new(BLOCK_SIZE * WIDTH as f32, y),
+                    Point2::new((BLOCK_SIZE * WIDTH) as f32, y),
                 ],
                 2.0,
                 grid_color,
@@ -55,7 +54,6 @@ impl Matrix {
         Ok(Matrix {
             grid: [[0; WIDTH]; HEIGHT + VANISH],
             grid_mesh,
-            blocks: SpriteBatch::new(Image::new(ctx, "blocks.png")?),
         })
     }
 
@@ -110,14 +108,19 @@ impl Matrix {
 }
 
 impl Matrix {
-    pub fn draw(&mut self, ctx: &mut Context, position: Point2<f32>) -> GameResult {
+    pub fn draw(
+        &mut self,
+        ctx: &mut Context,
+        position: Point2<f32>,
+        blocks: &mut Blocks,
+    ) -> GameResult {
         graphics::draw(
             ctx,
             &self.grid_mesh,
             graphics::DrawParam::new().dest(position),
         )?;
 
-        self.blocks.clear();
+        blocks.clear();
 
         for y in 0..HEIGHT {
             for x in 0..WIDTH {
@@ -126,18 +129,17 @@ impl Matrix {
                     continue;
                 }
 
-                let src = Rect::new((block - 1) as f32 / 7.0, 0.0, 1.0 / 7.0, 1.0);
-
                 let dest = Point2::new(
-                    position[0] + x as f32 * BLOCK_SIZE,
-                    position[1] + HEIGHT as f32 * BLOCK_SIZE - y as f32 * BLOCK_SIZE,
+                    position[0] + (x * BLOCK_SIZE) as f32,
+                    position[1] + ((HEIGHT - y - 1) * BLOCK_SIZE) as f32,
                 );
 
-                self.blocks.add(DrawParam::new().src(src).dest(dest));
+                blocks.add(block, dest);
             }
         }
 
-        graphics::draw(ctx, &self.blocks, DrawParam::new())?;
+        blocks.draw(ctx)?;
+
         Ok(())
     }
 }
