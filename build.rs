@@ -13,7 +13,6 @@ fn main() {
     let profile = env::var("PROFILE").unwrap();
     println!("cargo:rustc-cfg=build={:?}", &profile);
 
-    // Don't create zip file on debug mode
     if profile == "debug" {
         return;
     }

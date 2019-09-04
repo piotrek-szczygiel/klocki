@@ -63,11 +63,13 @@ impl ImGuiWrapper {
 
         let mut skins: Vec<path::PathBuf> = vec![];
         {
-            let skins_dir: Vec<_> = filesystem::read_dir(ctx, utils::path("blocks"))
+            let skins_dir: Vec<_> = filesystem::read_dir(ctx, utils::path(ctx, "blocks"))
                 .unwrap()
                 .collect();
 
             for skin in skins_dir {
+                println!("- {:?}", skin);
+
                 if skin.extension().is_none() {
                     continue;
                 }
@@ -200,6 +202,12 @@ impl ImGuiWrapper {
     }
 
     pub fn tileset(&self, ctx: &mut Context) -> GameResult<Image> {
-        Image::new(ctx, &self.skins[self.state.current_skin_id])
+        Image::new(
+            ctx,
+            utils::path(
+                ctx,
+                self.skins[self.state.current_skin_id].to_str().unwrap(),
+            ),
+        )
     }
 }

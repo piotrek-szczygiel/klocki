@@ -1,10 +1,16 @@
 use crate::{
-    bag::Bag, blocks::Blocks, imgui_wrapper::ImGuiWrapper, matrix::Matrix,
-    particles::ParticleAnimation, utils,
+    bag::Bag,
+    blocks::Blocks,
+    imgui_wrapper::ImGuiWrapper,
+    input::{Action, Input},
+    matrix::Matrix,
+    particles::ParticleAnimation,
+    utils,
 };
 
 use ggez::{
     graphics::{self, Image},
+    input::keyboard::KeyCode,
     nalgebra::Point2,
     Context, GameResult,
 };
@@ -18,8 +24,8 @@ pub struct Game {
 }
 
 impl Game {
-    pub fn new(ctx: &mut Context, imgui: &ImGuiWrapper) -> GameResult<Self> {
-        let background = Image::new(ctx, utils::path("background.png"))?;
+    pub fn new(ctx: &mut Context, input: &mut Input, imgui: &ImGuiWrapper) -> GameResult<Self> {
+        let background = Image::new(ctx, utils::path(ctx, "background.png"))?;
         let matrix = Matrix::new(ctx)?;
         let bag = Bag::new();
 
@@ -27,6 +33,10 @@ impl Game {
 
         let rect = graphics::screen_coordinates(ctx);
         let particle_animation = ParticleAnimation::new(100, 200.0, 70.0, rect.w, rect.h);
+
+        input
+            .bind_key(KeyCode::Space, Action::HardFall)
+            .bind_key(KeyCode::LShift, Action::SoftFall);
 
         Ok(Game {
             matrix,

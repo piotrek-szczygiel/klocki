@@ -1,4 +1,5 @@
 use ggez::{
+    filesystem,
     graphics::{self, Rect},
     input,
     nalgebra::Point2,
@@ -17,12 +18,12 @@ pub fn dt(ctx: &mut Context) -> f32 {
     timer::duration_to_f64(timer::delta(ctx)) as f32
 }
 
-#[cfg(build = "release")]
-pub fn path(path: &str) -> String {
-    String::from(path)
-}
+pub fn path(ctx: &Context, path: &str) -> String {
+    let slash_path = String::from("/") + path;
 
-#[cfg(build = "debug")]
-pub fn path(path: &str) -> String {
-    String::from("/") + path
+    if filesystem::is_file(ctx, &slash_path) || filesystem::is_dir(ctx, &slash_path) {
+        slash_path
+    } else {
+        String::from(path)
+    }
 }

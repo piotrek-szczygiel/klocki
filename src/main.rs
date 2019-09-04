@@ -4,12 +4,11 @@ mod bag;
 mod blocks;
 mod game;
 mod imgui_wrapper;
+mod input;
 mod matrix;
 mod particles;
 mod shape;
 mod utils;
-
-use std::{env, path};
 
 use crate::imgui_wrapper::ImGuiWrapper;
 
@@ -20,7 +19,7 @@ use ggez::{
     conf,
     event::{self, EventHandler, KeyMods, MouseButton},
     graphics::{self, Color, DrawParam, Font, Image, Scale, Text, TextFragment},
-    input::{self, keyboard::KeyCode},
+    input::keyboard::KeyCode,
     nalgebra::Point2,
     timer, Context, ContextBuilder, GameResult,
 };
@@ -45,24 +44,22 @@ fn main() -> GameResult {
     // Read from resources directory on debug mode
     #[cfg(build = "debug")]
     {
-        let manifest_dir = env::var("CARGO_MANIFEST_DIR").unwrap();
-        let mut path = path::PathBuf::from(manifest_dir);
+        let manifest_dir = std::env::var("CARGO_MANIFEST_DIR").unwrap();
+        let mut path = std::path::PathBuf::from(manifest_dir);
         path.push("resources");
-        log::debug!("DEBUG MODE: adding resources path {:?}", path);
         cb = cb.add_resource_path(path);
     }
 
     // Read from baked in zip file on release mode
     #[cfg(build = "release")]
     {
-        log::debug!("RELEASE MODE: adding baked in zipped resources");
         cb = cb.add_zipfile_bytes(include_bytes!("../resources.zip").to_vec());
     }
 
     let (ctx, event_loop) = &mut cb.build()?;
 
     graphics::set_screen_coordinates(ctx, graphics::Rect::new(0.0, 0.0, 1920.0, 1080.0))?;
-    input::mouse::set_cursor_hidden(ctx, true);
+    ggez::input::mouse::set_cursor_hidden(ctx, true);
 
     let game = &mut Tetris::new(ctx)?;
 
@@ -84,6 +81,7 @@ struct WindowSettings {
 struct Tetris {
     window_settings: WindowSettings,
     game: game::Game,
+    input: input::Input,
     imgui_wrapper: imgui_wrapper::ImGuiWrapper,
     cursor: Cursor,
 }
@@ -96,13 +94,15 @@ impl Tetris {
         };
 
         let imgui = ImGuiWrapper::new(ctx);
+        let mut input = input::Input::new();
 
         Ok(Tetris {
             window_settings,
-            game: game::Game::new(ctx, &imgui)?,
+            game: game::Game::new(ctx, &mut input, &imgui)?,
+            input,
             imgui_wrapper: imgui,
             cursor: Cursor {
-                image: Image::new(ctx, utils::path("cursor.png"))?,
+                image: Image::new(ctx, utils::path(ctx, "cursor.png"))?,
                 last_position: Point2::new(0.0, 0.0),
                 duration_static: 0.0,
             },
@@ -122,6 +122,7 @@ impl EventHandler for Tetris {
             self.window_settings.toggle_fullscreen = false;
         }
 
+        self.input.update();
         self.game.update(ctx, &self.imgui_wrapper)?;
 
         Ok(())
@@ -156,15 +157,17 @@ impl EventHandler for Tetris {
         &mut self,
         _ctx: &mut Context,
         keycode: KeyCode,
-        _keymod: KeyMods,
-        _repeat: bool,
+        _keymods: KeyMods,
+        repeat: bool,
     ) {
-        if let KeyCode::Escape = keycode {
-            ()
+        if !repeat {
+            self.input.key_down(keycode);
         }
     }
 
-    fn key_up_event(&mut self, _ctx: &mut Context, keycode: KeyCode, _keymod: KeyMods) {
+    fn key_up_event(&mut self, _ctx: &mut Context, keycode: KeyCode, _keymods: KeyMods) {
+        self.input.key_up(keycode);
+
         match keycode {
             KeyCode::F11 => {
                 self.window_settings.toggle_fullscreen = true;
