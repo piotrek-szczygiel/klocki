@@ -108,7 +108,7 @@ impl EventHandler for Tetris {
             self.window_settings.toggle_fullscreen = false;
         }
 
-        self.input.update();
+        self.input.update(ctx);
         self.game
             .update(ctx, &mut self.input, &self.imgui_wrapper)?;
 
@@ -123,21 +123,7 @@ impl EventHandler for Tetris {
         Ok(())
     }
 
-    fn key_down_event(
-        &mut self,
-        _ctx: &mut Context,
-        keycode: KeyCode,
-        _keymods: KeyMods,
-        repeat: bool,
-    ) {
-        if !repeat {
-            self.input.key_down(keycode);
-        }
-    }
-
     fn key_up_event(&mut self, _ctx: &mut Context, keycode: KeyCode, _keymods: KeyMods) {
-        self.input.key_up(keycode);
-
         match keycode {
             KeyCode::F11 => {
                 self.window_settings.toggle_fullscreen = true;
