@@ -32,7 +32,7 @@ impl Game {
         let blocks = Blocks::new(imgui.tileset(ctx)?);
 
         let rect = graphics::screen_coordinates(ctx);
-        let particle_animation = ParticleAnimation::new(100, 200.0, 70.0, rect.w, rect.h);
+        let particle_animation = ParticleAnimation::new(120, 200.0, 80.0, rect.w, rect.h);
 
         input
             .bind_key(KeyCode::Space, Action::HardFall)

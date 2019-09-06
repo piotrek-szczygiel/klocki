@@ -13,6 +13,7 @@ const MOUSE_THRESHOLD: f32 = 200.0;
 struct Particle {
     position: Point2<f32>,
     speed: Vector2<f32>,
+    starting_speed: Vector2<f32>,
     size: f32,
     color: Color,
 }
@@ -33,6 +34,7 @@ impl Particle {
 
         for _ in 0..n {
             let speed = Vector2::new(uniform_vx.sample(&mut rng), uniform_vy.sample(&mut rng));
+            let starting_speed = speed.abs();
 
             let mut size = normal_size.sample(&mut rng);
 
@@ -58,6 +60,7 @@ impl Particle {
             particles.push(Particle {
                 position,
                 speed,
+                starting_speed,
                 size,
                 color,
             })
@@ -134,12 +137,14 @@ impl ParticleAnimation {
                 particle.speed +=
                     direction * dt * (MOUSE_THRESHOLD - distance) / MOUSE_THRESHOLD * 50.0;
             } else {
-                if particle.speed[0].abs() > 1.0 {
-                    particle.speed[0] -= particle.speed[0].signum() * dt * 10.0;
+                if particle.speed[0].abs() > particle.starting_speed[0] {
+                    particle.speed[0] -=
+                        particle.speed[0].signum() * dt * particle.starting_speed[0] * 10.0;
                 }
 
-                if particle.speed[1].abs() > 1.0 {
-                    particle.speed[1] -= particle.speed[1].signum() * dt * 10.0;
+                if particle.speed[1].abs() > particle.starting_speed[1] {
+                    particle.speed[1] -=
+                        particle.speed[1].signum() * dt * particle.starting_speed[1] * 10.0;
                 }
             }
         }

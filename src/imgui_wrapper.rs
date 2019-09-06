@@ -8,7 +8,7 @@ use ggez::{
     Context, GameResult,
 };
 
-use imgui::{self, im_str, ImStr, ImString};
+use imgui::{self, im_str, ImStr, ImString, StyleColor};
 use imgui_gfx_renderer::{Renderer, Shaders};
 
 use crate::utils;
@@ -68,8 +68,6 @@ impl ImGuiWrapper {
                 .collect();
 
             for skin in skins_dir {
-                println!("- {:?}", skin);
-
                 if skin.extension().is_none() {
                     continue;
                 }
@@ -156,6 +154,19 @@ impl ImGuiWrapper {
                         state.skin_switched = true;
                     }
                 });
+
+                ui.separator();
+                ui.text(im_str!("FPS:"));
+
+                let fps = ggez::timer::fps(ctx) as i32;
+                let color = if fps > 55 {
+                    [0.0, 1.0, 0.0, 1.0]
+                } else {
+                    [1.0, 0.0, 0.0, 1.0]
+                };
+
+                let _token = ui.push_style_color(StyleColor::Text, color);
+                ui.text(ImString::from(fps.to_string()));
             });
 
             self.state = state;

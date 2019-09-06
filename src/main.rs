@@ -18,10 +18,9 @@ use log;
 use ggez::{
     conf,
     event::{self, EventHandler, KeyMods, MouseButton},
-    graphics::{self, Color, DrawParam, Font, Scale, Text, TextFragment},
+    graphics,
     input::keyboard::KeyCode,
-    nalgebra::Point2,
-    timer, Context, ContextBuilder, GameResult,
+    Context, ContextBuilder, GameResult,
 };
 
 fn main() -> GameResult {
@@ -39,7 +38,7 @@ fn main() -> GameResult {
                 .samples(conf::NumSamples::Four)
                 .vsync(false),
         )
-        .window_mode(conf::WindowMode::default().dimensions(1600.0, 900.0));
+        .window_mode(conf::WindowMode::default().dimensions(1280.0, 720.0));
 
     // Read from resources directory on debug mode
     #[cfg(build = "debug")]
@@ -62,7 +61,7 @@ fn main() -> GameResult {
 
     let game = &mut Tetris::new(ctx)?;
 
-    log::info!("starting the event loop");
+    log::info!("Starting the event looop");
     event::run(ctx, event_loop, game)
 }
 
@@ -117,25 +116,9 @@ impl EventHandler for Tetris {
 
     fn draw(&mut self, ctx: &mut Context) -> GameResult<()> {
         graphics::clear(ctx, graphics::WHITE);
-
         self.game.draw(ctx)?;
-
-        {
-            let fps = timer::fps(ctx) as i32;
-            let fps = Text::new(TextFragment {
-                text: format!("FPS: {}", fps),
-                color: Some(Color::new(1.0, 0.0, 0.0, 0.5)),
-                font: Some(Font::default()),
-                scale: Some(Scale::uniform(16.0)),
-            });
-
-            graphics::draw(ctx, &fps, DrawParam::new().dest(Point2::new(10.0, 30.0)))?;
-        }
-
         self.imgui_wrapper.draw(ctx);
-
         graphics::present(ctx)?;
-
         Ok(())
     }
 

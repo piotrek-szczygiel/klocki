@@ -18,7 +18,7 @@ impl Blocks {
             || tileset.height() as usize != BLOCK_SIZE
         {
             log::error!(
-                "invalid tileset size {}:{}",
+                "Invalid tileset size {}:{}",
                 tileset.width(),
                 tileset.height()
             );
@@ -53,7 +53,7 @@ impl Blocks {
                     .add(DrawParam::new().src(self.rects[block_id - 1]).dest(dest));
             }
             0 => (),
-            _ => log::error!("attempt to draw non-existing block: {}", block_id),
+            _ => log::error!("Attempt to draw a non-existing block: {}", block_id),
         }
     }
 
