@@ -109,7 +109,8 @@ impl EventHandler for Tetris {
         }
 
         self.input.update();
-        self.game.update(ctx, &self.imgui_wrapper)?;
+        self.game
+            .update(ctx, &mut self.input, &self.imgui_wrapper)?;
 
         Ok(())
     }

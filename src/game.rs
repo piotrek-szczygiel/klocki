@@ -34,9 +34,19 @@ impl Game {
         let rect = graphics::screen_coordinates(ctx);
         let particle_animation = ParticleAnimation::new(120, 200.0, 80.0, rect.w, rect.h);
 
+        // Default is 150ms delay and 50ms interval
+        let repeat = Some((150, 50));
+
         input
-            .bind_key(KeyCode::Space, Action::HardFall)
-            .bind_key(KeyCode::LShift, Action::SoftFall);
+            .bind(KeyCode::Right, Action::MoveRight, repeat)
+            .bind(KeyCode::Left, Action::MoveLeft, repeat)
+            .bind(KeyCode::Down, Action::MoveDown, repeat)
+            .bind(KeyCode::Up, Action::RotateClockwise, None)
+            .bind(KeyCode::X, Action::RotateClockwise, None)
+            .bind(KeyCode::Z, Action::RotateCounterClockwise, None)
+            .bind(KeyCode::Space, Action::HardFall, None)
+            .bind(KeyCode::LShift, Action::SoftFall, None)
+            .bind(KeyCode::C, Action::HoldPiece, None);
 
         Ok(Game {
             matrix,
@@ -47,7 +57,12 @@ impl Game {
         })
     }
 
-    pub fn update(&mut self, ctx: &mut Context, imgui: &ImGuiWrapper) -> GameResult<()> {
+    pub fn update(
+        &mut self,
+        ctx: &mut Context,
+        input: &mut Input,
+        imgui: &ImGuiWrapper,
+    ) -> GameResult<()> {
         self.particle_animation.update(ctx)?;
 
         if imgui.state.debug_t_spin_tower {
@@ -56,6 +71,10 @@ impl Game {
 
         if imgui.state.skin_switched {
             self.blocks = Blocks::new(imgui.tileset(ctx)?);
+        }
+
+        while let Some(action) = input.action() {
+            log::trace!("Action: {:?}", action);
         }
 
         Ok(())
