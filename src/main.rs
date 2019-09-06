@@ -18,7 +18,7 @@ use log;
 use ggez::{
     conf,
     event::{self, EventHandler, KeyMods, MouseButton},
-    graphics::{self, Color, DrawParam, Font, Image, Scale, Text, TextFragment},
+    graphics::{self, Color, DrawParam, Font, Scale, Text, TextFragment},
     input::keyboard::KeyCode,
     nalgebra::Point2,
     timer, Context, ContextBuilder, GameResult,
@@ -59,18 +59,11 @@ fn main() -> GameResult {
     let (ctx, event_loop) = &mut cb.build()?;
 
     graphics::set_screen_coordinates(ctx, graphics::Rect::new(0.0, 0.0, 1920.0, 1080.0))?;
-    ggez::input::mouse::set_cursor_hidden(ctx, true);
 
     let game = &mut Tetris::new(ctx)?;
 
     log::info!("starting the event loop");
     event::run(ctx, event_loop, game)
-}
-
-struct Cursor {
-    image: Image,
-    last_position: Point2<f32>,
-    duration_static: f32,
 }
 
 struct WindowSettings {
@@ -83,7 +76,6 @@ struct Tetris {
     game: game::Game,
     input: input::Input,
     imgui_wrapper: imgui_wrapper::ImGuiWrapper,
-    cursor: Cursor,
 }
 
 impl Tetris {
@@ -101,11 +93,6 @@ impl Tetris {
             game: game::Game::new(ctx, &mut input, &imgui)?,
             input,
             imgui_wrapper: imgui,
-            cursor: Cursor {
-                image: Image::new(ctx, utils::path(ctx, "cursor.png"))?,
-                last_position: Point2::new(0.0, 0.0),
-                duration_static: 0.0,
-            },
         })
     }
 }
@@ -146,7 +133,6 @@ impl EventHandler for Tetris {
         }
 
         self.imgui_wrapper.draw(ctx);
-        self.cursor.draw(ctx)?;
 
         graphics::present(ctx)?;
 
@@ -204,36 +190,5 @@ impl EventHandler for Tetris {
         _y: f32,
     ) {
         self.imgui_wrapper.update_mouse_down((false, false, false));
-    }
-}
-
-impl Cursor {
-    fn draw(&mut self, ctx: &mut Context) -> GameResult {
-        let pos = utils::mouse_position_coords(ctx);
-        if self.last_position == pos {
-            self.duration_static += utils::dt(ctx);
-        } else {
-            self.duration_static = 0.0;
-        }
-
-        self.last_position = pos;
-
-        let transparency = if self.duration_static > 3.0 {
-            0.0
-        } else if self.duration_static > 1.0 {
-            1.0 - (self.duration_static - 1.0)
-        } else {
-            1.0
-        };
-
-        graphics::draw(
-            ctx,
-            &self.image,
-            DrawParam::new()
-                .dest(pos)
-                .color(Color::new(1.0, 1.0, 1.0, transparency)),
-        )?;
-
-        Ok(())
     }
 }
