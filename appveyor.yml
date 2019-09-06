@@ -15,7 +15,7 @@ install:
     - cargo -V
 
 test_script:
-    - cargo test --release --verbose --no-default-features headless
+    - cargo test --release --verbose --no-default-features headless && cargo build --release
 
 build: false
 
