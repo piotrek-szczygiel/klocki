@@ -111,13 +111,13 @@ impl ImGuiWrapper {
         let delta_s = delta.as_secs() as f32 + delta.subsec_nanos() as f32 / 1_000_000_000.0;
         self.last_frame = now;
 
+        let dpi_factor = ggez::graphics::window(ctx).get_hidpi_factor() as f32;
         let (w, h) = graphics::drawable_size(ctx);
         self.imgui.io_mut().display_size = [w, h];
-        self.imgui.io_mut().display_framebuffer_scale = [1.0, 1.0];
+        self.imgui.io_mut().display_framebuffer_scale = [dpi_factor, dpi_factor];
         self.imgui.io_mut().delta_time = delta_s;
 
         let ui = self.imgui.frame();
-
         {
             let skins_im_len = self.skins_im.len() as i32;
             let skins_im: Vec<&ImStr> = self.skins_im.iter().map(|s| s.as_ref()).collect();
