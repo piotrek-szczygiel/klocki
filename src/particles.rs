@@ -139,12 +139,12 @@ impl ParticleAnimation {
             } else {
                 if particle.speed[0].abs() > particle.starting_speed[0] {
                     particle.speed[0] -=
-                        particle.speed[0].signum() * dt * particle.starting_speed[0] * 10.0;
+                        particle.speed[0].signum() * dt * particle.starting_speed[0] * 50.0;
                 }
 
                 if particle.speed[1].abs() > particle.starting_speed[1] {
                     particle.speed[1] -=
-                        particle.speed[1].signum() * dt * particle.starting_speed[1] * 10.0;
+                        particle.speed[1].signum() * dt * particle.starting_speed[1] * 50.0;
                 }
             }
         }

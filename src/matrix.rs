@@ -21,7 +21,7 @@ pub struct Matrix {
 impl Matrix {
     pub fn new(ctx: &mut Context) -> GameResult<Self> {
         let grid_mesh = &mut graphics::MeshBuilder::new();
-        let grid_color = graphics::Color::new(0.3, 0.3, 0.3, 0.5);
+        let grid_color = graphics::Color::new(0.2, 0.2, 0.2, 1.0);
 
         for x in 0..=WIDTH {
             let x = (x * BLOCK_SIZE) as f32;
@@ -31,7 +31,7 @@ impl Matrix {
                     Point2::new(x, 0.0),
                     Point2::new(x, (BLOCK_SIZE * HEIGHT) as f32),
                 ],
-                2.0,
+                1.0,
                 grid_color,
             )?;
         }
@@ -44,7 +44,7 @@ impl Matrix {
                     Point2::new(0.0, y),
                     Point2::new((BLOCK_SIZE * WIDTH) as f32, y),
                 ],
-                2.0,
+                1.0,
                 grid_color,
             )?;
         }

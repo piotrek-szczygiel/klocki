@@ -3,9 +3,10 @@ use std::{path, time::Instant};
 use gfx_core::{handle::RenderTargetView, memory::Typed};
 use gfx_device_gl;
 use ggez::{
-    filesystem,
+    conf::WindowMode,
+    event, filesystem,
     graphics::{self, Image},
-    Context, GameResult,
+    timer, Context, GameResult,
 };
 
 use imgui::{self, im_str, ImStr, ImString, StyleColor};
@@ -22,8 +23,11 @@ struct MouseState {
 
 pub struct State {
     pub debug_t_spin_tower: bool,
-    pub skin_switched: bool,
+
     pub current_skin_id: usize,
+    pub skin_switched: bool,
+
+    pub current_scale: f32,
 }
 
 pub struct ImGuiWrapper {
@@ -38,7 +42,7 @@ pub struct ImGuiWrapper {
 }
 
 impl ImGuiWrapper {
-    pub fn new(ctx: &mut ggez::Context) -> Self {
+    pub fn new(ctx: &mut Context) -> Self {
         let mut imgui = imgui::Context::create();
         let (factory, gfx_device, _, _, _) = graphics::gfx_objects(ctx);
 
@@ -92,6 +96,7 @@ impl ImGuiWrapper {
                 debug_t_spin_tower: false,
                 skin_switched: false,
                 current_skin_id: 0,
+                current_scale: graphics::size(ctx).0 / 1920.0,
             },
             last_frame: Instant::now(),
             mouse_state: MouseState::default(),
@@ -101,7 +106,7 @@ impl ImGuiWrapper {
         }
     }
 
-    pub fn draw(&mut self, ctx: &mut ggez::Context) {
+    pub fn draw(&mut self, ctx: &mut Context) {
         self.update_mouse();
 
         let now = Instant::now();
@@ -109,7 +114,7 @@ impl ImGuiWrapper {
         let delta_s = delta.as_secs() as f32 + delta.subsec_nanos() as f32 / 1_000_000_000.0;
         self.last_frame = now;
 
-        let dpi_factor = ggez::graphics::window(ctx).get_hidpi_factor() as f32;
+        let dpi_factor = graphics::window(ctx).get_hidpi_factor() as f32;
         let (w, h) = graphics::drawable_size(ctx);
         self.imgui.io_mut().display_size = [w, h];
         self.imgui.io_mut().display_framebuffer_scale = [dpi_factor, dpi_factor];
@@ -124,6 +129,7 @@ impl ImGuiWrapper {
                 debug_t_spin_tower: false,
                 skin_switched: false,
                 current_skin_id: self.state.current_skin_id,
+                current_scale: self.state.current_scale,
             };
 
             if self.show_debug_window {
@@ -143,11 +149,29 @@ impl ImGuiWrapper {
             ui.main_menu_bar(|| {
                 ui.menu(im_str!("File")).build(|| {
                     if ui.menu_item(im_str!("Quit")).build() {
-                        ggez::event::quit(ctx);
+                        event::quit(ctx);
                     }
                 });
 
-                ui.menu(im_str!("Skin")).build(|| {
+                ui.menu(im_str!("Settings")).build(|| {
+                    ui.text(im_str!("Window scale"));
+                    if ui
+                        .slider_float(im_str!(""), &mut state.current_scale, 0.25, 2.0)
+                        .build()
+                    {
+                        graphics::set_mode(
+                            ctx,
+                            WindowMode::default().dimensions(
+                                1920.0 * state.current_scale,
+                                1080.0 * state.current_scale,
+                            ),
+                        )
+                        .unwrap_or_else(|e| log::error!("Unable to change resolution: {:?}", e));
+                    }
+
+                    ui.separator();
+
+                    ui.text(im_str!("Blocks skin"));
                     let mut current_skin_id = state.current_skin_id as i32;
                     if ui.list_box(im_str!(""), &mut current_skin_id, &skins_im, skins_im_len) {
                         state.current_skin_id = current_skin_id as usize;
@@ -158,7 +182,7 @@ impl ImGuiWrapper {
                 ui.separator();
                 ui.text(im_str!("FPS:"));
 
-                let fps = ggez::timer::fps(ctx) as i32;
+                let fps = timer::fps(ctx) as i32;
                 let color = if fps > 55 {
                     [0.0, 1.0, 0.0, 1.0]
                 } else {
@@ -181,7 +205,7 @@ impl ImGuiWrapper {
                 &mut RenderTargetView::new(render_target.clone()),
                 draw_data,
             )
-            .unwrap();
+            .unwrap_or_else(|e| log::error!("Error while rendering ImGui: {:?}", e));
     }
 
     fn update_mouse(&mut self) {

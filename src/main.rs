@@ -13,7 +13,7 @@ mod utils;
 use crate::imgui_wrapper::ImGuiWrapper;
 
 use env_logger;
-use log;
+use log::{self, LevelFilter};
 
 use ggez::{
     conf,
@@ -23,12 +23,20 @@ use ggez::{
     Context, ContextBuilder, GameResult,
 };
 
-fn main() -> GameResult {
-    env_logger::init_from_env(
-        env_logger::Env::default()
-            .filter_or("LOG_LEVEL", "tetris,ggez")
-            .write_style_or("LOG_STYLE", "always"),
-    );
+fn main() {
+    env_logger::builder()
+        .default_format_timestamp(false)
+        .filter_module("ggez", LevelFilter::Warn)
+        .filter_module("tetris", LevelFilter::Trace)
+        .init();
+
+    if let Some(err) = real_main().err() {
+        log::error!("{}", err);
+    }
+}
+
+fn real_main() -> GameResult {
+    log::debug!("Creating the context");
 
     let mut cb = ContextBuilder::new("tetris", "piotrek-szczygiel")
         .with_conf_file(false)
@@ -43,6 +51,7 @@ fn main() -> GameResult {
     // Read from resources directory on debug mode
     #[cfg(build = "debug")]
     {
+        log::debug!("Adding resources path");
         let manifest_dir = std::env::var("CARGO_MANIFEST_DIR").unwrap();
         let mut path = std::path::PathBuf::from(manifest_dir);
         path.push("resources");
@@ -52,6 +61,7 @@ fn main() -> GameResult {
     // Read from baked in zip file on release mode
     #[cfg(build = "release")]
     {
+        log::debug!("Loading resources from baked archive");
         cb = cb.add_zipfile_bytes(include_bytes!("../resources.zip").to_vec());
     }
 
@@ -59,10 +69,13 @@ fn main() -> GameResult {
 
     graphics::set_screen_coordinates(ctx, graphics::Rect::new(0.0, 0.0, 1920.0, 1080.0))?;
 
-    let game = &mut Tetris::new(ctx)?;
+    let game = &mut Application::new(ctx)?;
 
-    log::info!("Starting the event looop");
-    event::run(ctx, event_loop, game)
+    log::info!("Starting the event loop");
+    event::run(ctx, event_loop, game)?;
+    log::info!("Exiting the application");
+
+    Ok(())
 }
 
 struct WindowSettings {
@@ -70,14 +83,14 @@ struct WindowSettings {
     is_fullscreen: bool,
 }
 
-struct Tetris {
+struct Application {
     window_settings: WindowSettings,
     game: game::Game,
     input: input::Input,
     imgui_wrapper: imgui_wrapper::ImGuiWrapper,
 }
 
-impl Tetris {
+impl Application {
     fn new(ctx: &mut Context) -> GameResult<Self> {
         let window_settings = WindowSettings {
             toggle_fullscreen: false,
@@ -87,7 +100,7 @@ impl Tetris {
         let imgui = ImGuiWrapper::new(ctx);
         let mut input = input::Input::new();
 
-        Ok(Tetris {
+        Ok(Application {
             window_settings,
             game: game::Game::new(ctx, &mut input, &imgui)?,
             input,
@@ -96,7 +109,7 @@ impl Tetris {
     }
 }
 
-impl EventHandler for Tetris {
+impl EventHandler for Application {
     fn update(&mut self, ctx: &mut Context) -> GameResult<()> {
         if self.window_settings.toggle_fullscreen {
             let fullscreen_type = if self.window_settings.is_fullscreen {
@@ -123,13 +136,14 @@ impl EventHandler for Tetris {
         Ok(())
     }
 
-    fn key_up_event(&mut self, _ctx: &mut Context, keycode: KeyCode, _keymods: KeyMods) {
+    fn key_up_event(&mut self, ctx: &mut Context, keycode: KeyCode, _keymods: KeyMods) {
         match keycode {
             KeyCode::F11 => {
                 self.window_settings.toggle_fullscreen = true;
                 self.window_settings.is_fullscreen = !self.window_settings.is_fullscreen;
             }
             KeyCode::D => self.imgui_wrapper.toggle_window(),
+            KeyCode::Escape => event::quit(ctx),
             _ => (),
         }
     }
