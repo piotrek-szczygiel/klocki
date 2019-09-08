@@ -39,7 +39,7 @@ pub struct Input {
 }
 
 impl Input {
-    pub fn new() -> Self {
+    pub fn new() -> Input {
         let mut key_activated = Vec::with_capacity(MAX_KEYCODES);
         let mut key_repeated = Vec::with_capacity(MAX_KEYCODES);
 
@@ -61,7 +61,7 @@ impl Input {
         keycode: KeyCode,
         action: Action,
         repeat: Option<(u64, u64)>,
-    ) -> &mut Self {
+    ) -> &mut Input {
         match self.key_binds.get_mut(&keycode) {
             None => {
                 let repeat = match repeat {
@@ -91,15 +91,17 @@ impl Input {
     pub fn update(&mut self, ctx: &Context) {
         let now = Instant::now();
 
-        for key in ggez::input::keyboard::pressed_keys(ctx) {
-            let bind = self.key_binds.get(key);
-            if bind.is_none() {
+        let pressed_keys = ggez::input::keyboard::pressed_keys(ctx);
+
+        for (keycode, bind) in &self.key_binds {
+            let key = *keycode as usize;
+
+            if !pressed_keys.contains(keycode) {
+                self.key_activated[key] = None;
+                self.key_repeated[key] = None;
                 continue;
             }
 
-            let bind = bind.unwrap();
-
-            let key = *key as usize;
             let mut active = false;
 
             match self.key_activated[key] {
