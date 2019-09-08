@@ -7,7 +7,7 @@ pub struct Bag {
 }
 
 impl Bag {
-    pub fn new() -> Self {
+    pub fn new() -> Bag {
         let mut bag = Bag {
             bag: Vec::with_capacity(14),
         };

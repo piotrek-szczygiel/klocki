@@ -1,5 +1,5 @@
-type Kick = [(i32, i32); 4];
-type Kicks = [(Kick, Kick); 4];
+pub type Kick = [(i64, i64); 4];
+pub type Kicks = [(Kick, Kick); 4];
 
 const KICKS_JLSTZ: Kicks = [
     (
@@ -39,16 +39,22 @@ const KICKS_I: Kicks = [
     ),
 ];
 
-struct ShapeGrid {
-    offset_x: i32,
-    offset_y: i32,
-    width: i32,
-    height: i32,
-    grid: [[i32; 4]; 4],
+pub struct ShapeGrid {
+    pub offset_x: usize,
+    pub offset_y: usize,
+    pub width: usize,
+    pub height: usize,
+    pub grid: [[usize; 4]; 4],
 }
 
 impl ShapeGrid {
-    fn new(offset_x: i32, offset_y: i32, width: i32, height: i32, grid: [[i32; 4]; 4]) -> Self {
+    fn new(
+        offset_x: usize,
+        offset_y: usize,
+        width: usize,
+        height: usize,
+        grid: [[usize; 4]; 4],
+    ) -> ShapeGrid {
         ShapeGrid {
             offset_x,
             offset_y,
@@ -59,15 +65,9 @@ impl ShapeGrid {
     }
 }
 
-pub struct Shape {
-    pub shape_type: ShapeType,
-    grids: [ShapeGrid; 4],
-    kicks: Kicks,
-}
-
-#[derive(Debug, PartialEq)]
+#[derive(Copy, Clone, Debug, PartialEq)]
 pub enum ShapeType {
-    I,
+    I = 1,
     J,
     L,
     O,
@@ -76,8 +76,14 @@ pub enum ShapeType {
     Z,
 }
 
+pub struct Shape {
+    pub shape_type: ShapeType,
+    pub grids: [ShapeGrid; 4],
+    pub kicks: Kicks,
+}
+
 impl Shape {
-    fn new(shape_type: ShapeType) -> Self {
+    pub fn new(shape_type: ShapeType) -> Shape {
         match shape_type {
             ShapeType::I => Shape {
                 shape_type: ShapeType::I,

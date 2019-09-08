@@ -7,6 +7,7 @@ mod imgui_wrapper;
 mod input;
 mod matrix;
 mod particles;
+mod piece;
 mod shape;
 mod utils;
 
@@ -91,7 +92,7 @@ struct Application {
 }
 
 impl Application {
-    fn new(ctx: &mut Context) -> GameResult<Self> {
+    fn new(ctx: &mut Context) -> GameResult<Application> {
         let window_settings = WindowSettings {
             toggle_fullscreen: false,
             is_fullscreen: false,

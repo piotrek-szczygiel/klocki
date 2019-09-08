@@ -19,8 +19,8 @@ struct Particle {
 }
 
 impl Particle {
-    fn new(n: usize, max_x: f32, max_y: f32) -> Vec<Self> {
-        let mut particles: Vec<Self> = vec![];
+    fn new(n: usize, max_x: f32, max_y: f32) -> Vec<Particle> {
+        let mut particles: Vec<Particle> = vec![];
         let mut rng = rand::thread_rng();
 
         let uniform_x = Uniform::new(0.01, 0.99);
@@ -86,7 +86,7 @@ impl ParticleAnimation {
         max_speed: f32,
         width: f32,
         height: f32,
-    ) -> Self {
+    ) -> ParticleAnimation {
         ParticleAnimation {
             particles: Particle::new(max_particles, width, height),
             max_particles,

@@ -42,7 +42,7 @@ pub struct ImGuiWrapper {
 }
 
 impl ImGuiWrapper {
-    pub fn new(ctx: &mut Context) -> Self {
+    pub fn new(ctx: &mut Context) -> ImGuiWrapper {
         let mut imgui = imgui::Context::create();
         let (factory, gfx_device, _, _, _) = graphics::gfx_objects(ctx);
 
@@ -89,7 +89,7 @@ impl ImGuiWrapper {
             .map(|s| ImString::from(String::from(s.file_name().unwrap().to_str().unwrap())))
             .collect();
 
-        Self {
+        ImGuiWrapper {
             imgui,
             renderer,
             state: State {

@@ -5,6 +5,8 @@ use crate::{
     input::{Action, Input},
     matrix::Matrix,
     particles::ParticleAnimation,
+    piece::Piece,
+    shape::ShapeType,
     utils,
 };
 
@@ -17,6 +19,7 @@ use ggez::{
 
 pub struct Game {
     matrix: Matrix,
+    piece: Piece,
     bag: Bag,
     blocks: Blocks,
     particle_animation: ParticleAnimation,
@@ -24,7 +27,7 @@ pub struct Game {
 }
 
 impl Game {
-    pub fn new(ctx: &mut Context, input: &mut Input, imgui: &ImGuiWrapper) -> GameResult<Self> {
+    pub fn new(ctx: &mut Context, input: &mut Input, imgui: &ImGuiWrapper) -> GameResult<Game> {
         let background = Image::new(ctx, utils::path(ctx, "background.png"))?;
         let matrix = Matrix::new(ctx)?;
         let bag = Bag::new();
@@ -48,8 +51,11 @@ impl Game {
             .bind(KeyCode::LShift, Action::SoftFall, None)
             .bind(KeyCode::C, Action::HoldPiece, None);
 
+        let piece = Piece::new(ShapeType::T, Point2::new(0, 30), 0);
+
         Ok(Game {
             matrix,
+            piece,
             bag,
             blocks,
             particle_animation,
@@ -75,6 +81,16 @@ impl Game {
 
         while let Some(action) = input.action() {
             log::trace!("Action: {:?}", action);
+
+            if !match action {
+                Action::MoveRight => self.piece.move_piece(1, 0, &self.matrix),
+                Action::MoveLeft => self.piece.move_piece(-1, 0, &self.matrix),
+                Action::MoveDown => self.piece.move_piece(0, 1, &self.matrix),
+                Action::RotateClockwise => self.piece.move_piece(0, -1, &self.matrix),
+                _ => true,
+            } {
+                log::warn!("Unable to move");
+            }
         }
 
         Ok(())
@@ -86,6 +102,9 @@ impl Game {
         self.particle_animation.draw(ctx)?;
 
         self.matrix
+            .draw(ctx, Point2::new(200.0, 200.0), &mut self.blocks)?;
+
+        self.piece
             .draw(ctx, Point2::new(200.0, 200.0), &mut self.blocks)?;
 
         Ok(())

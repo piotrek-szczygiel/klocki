@@ -13,7 +13,7 @@ pub struct Blocks {
 }
 
 impl Blocks {
-    pub fn new(tileset: Image) -> Self {
+    pub fn new(tileset: Image) -> Blocks {
         if tileset.width() as usize != BLOCK_SIZE * BLOCKS_NUM
             || tileset.height() as usize != BLOCK_SIZE
         {
