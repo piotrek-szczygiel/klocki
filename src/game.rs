@@ -51,7 +51,7 @@ impl Game {
             .bind(KeyCode::LShift, Action::SoftFall, None)
             .bind(KeyCode::C, Action::HoldPiece, None);
 
-        let piece = Piece::new(ShapeType::T, Point2::new(0, 30), 0);
+        let piece = Piece::new(ShapeType::T, Point2::new(4, 18), 0);
 
         Ok(Game {
             matrix,
@@ -82,15 +82,18 @@ impl Game {
         while let Some(action) = input.action() {
             log::trace!("Action: {:?}", action);
 
-            if !match action {
-                Action::MoveRight => self.piece.move_piece(1, 0, &self.matrix),
-                Action::MoveLeft => self.piece.move_piece(-1, 0, &self.matrix),
-                Action::MoveDown => self.piece.move_piece(0, 1, &self.matrix),
-                Action::RotateClockwise => self.piece.move_piece(0, -1, &self.matrix),
-                _ => true,
-            } {
-                log::warn!("Unable to move");
-            }
+            match action {
+                Action::MoveRight => {
+                    self.piece.move_piece(1, 0, &self.matrix);
+                }
+                Action::MoveLeft => {
+                    self.piece.move_piece(-1, 0, &self.matrix);
+                }
+                Action::MoveDown => {
+                    self.piece.move_piece(0, 1, &self.matrix);
+                }
+                _ => (),
+            };
         }
 
         Ok(())

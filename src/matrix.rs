@@ -69,8 +69,6 @@ impl Matrix {
         let x = piece.position[0] + grid.offset_x;
         let y = piece.position[1] + grid.offset_y;
 
-        println!("Piece position: {}, {}", x, y);
-
         if x + grid.width > WIDTH {
             return true;
         } else if y + grid.height > HEIGHT + VANISH {
@@ -108,7 +106,7 @@ impl Matrix {
 
                 let dest = Point2::new(
                     position[0] + (x * BLOCK_SIZE) as f32,
-                    position[1] + (y * BLOCK_SIZE) as f32,
+                    position[1] + ((y - 1) * BLOCK_SIZE) as f32,
                 );
 
                 blocks.add(block, dest);
