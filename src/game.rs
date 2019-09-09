@@ -10,6 +10,7 @@ use crate::{
 };
 
 use ggez::{
+    audio::{self, SoundSource},
     graphics::{self, Image},
     input::keyboard::KeyCode,
     nalgebra::Point2,
@@ -23,11 +24,11 @@ pub struct Game {
     blocks: Blocks,
     particle_animation: ParticleAnimation,
     background: Image,
+    theme: audio::Source,
 }
 
 impl Game {
     pub fn new(ctx: &mut Context, input: &mut Input, imgui: &ImGuiWrapper) -> GameResult<Game> {
-        let background = Image::new(ctx, utils::path(ctx, "background.png"))?;
         let matrix = Matrix::new(ctx)?;
         let mut bag = Bag::new();
 
@@ -35,6 +36,11 @@ impl Game {
 
         let rect = graphics::screen_coordinates(ctx);
         let particle_animation = ParticleAnimation::new(120, 200.0, 80.0, rect.w, rect.h);
+
+        let background = Image::new(ctx, utils::path(ctx, "background.png"))?;
+        let mut theme = audio::Source::new(ctx, utils::path(ctx, "main_theme.ogg"))?;
+        theme.set_repeat(true);
+        theme.play()?;
 
         // Default is 150ms delay and 50ms interval
         let repeat = Some((150, 50));
@@ -60,6 +66,7 @@ impl Game {
             blocks,
             particle_animation,
             background,
+            theme,
         })
     }
 
