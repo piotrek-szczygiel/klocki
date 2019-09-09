@@ -29,6 +29,8 @@ pub struct State {
     pub current_skin_id: usize,
     pub skin_switched: bool,
 
+    pub toggle_fullscreen: bool,
+
     pub current_scale: f32,
 }
 
@@ -99,6 +101,7 @@ impl ImGuiWrapper {
                 debug_t_spin_tower: false,
                 skin_switched: false,
                 current_skin_id: 0,
+                toggle_fullscreen: false,
                 current_scale: graphics::size(ctx).0 / 1920.0,
             },
             last_frame: Instant::now(),
@@ -133,6 +136,7 @@ impl ImGuiWrapper {
                 debug_t_spin_tower: false,
                 skin_switched: false,
                 current_skin_id: self.state.current_skin_id,
+                toggle_fullscreen: false,
                 current_scale: self.state.current_scale,
             };
 
@@ -162,7 +166,15 @@ impl ImGuiWrapper {
                 });
 
                 ui.menu(im_str!("Settings")).build(|| {
+                    ui.text(im_str!("Fullscreen"));
+                    if ui.button(im_str!("Toggle fullscreen"), [212.0, 20.0]) {
+                        state.toggle_fullscreen = true;
+                    }
+
+                    ui.separator();
+
                     ui.text(im_str!("Window scale"));
+                    ui.push_id(0);
                     if ui
                         .slider_float(im_str!(""), &mut state.current_scale, 0.25, 2.0)
                         .build()
@@ -176,15 +188,18 @@ impl ImGuiWrapper {
                         )
                         .unwrap_or_else(|e| log::error!("Unable to change resolution: {:?}", e));
                     }
+                    ui.pop_id();
 
                     ui.separator();
 
                     ui.text(im_str!("Blocks skin"));
                     let mut current_skin_id = state.current_skin_id as i32;
-                    if ui.list_box(im_str!(""), &mut current_skin_id, &skins_im, skins_im_len) {
+                    ui.push_id(1);
+                    if ui.combo(im_str!(""), &mut current_skin_id, &skins_im, skins_im_len) {
                         state.current_skin_id = current_skin_id as usize;
                         state.skin_switched = true;
                     }
+                    ui.pop_id();
                 });
 
                 ui.separator();

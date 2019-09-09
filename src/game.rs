@@ -40,6 +40,7 @@ impl Game {
         let background = Image::new(ctx, utils::path(ctx, "background.png"))?;
         let mut theme = audio::Source::new(ctx, utils::path(ctx, "main_theme.ogg"))?;
         theme.set_repeat(true);
+        theme.set_volume(0.2);
         theme.play()?;
 
         // Default is 150ms delay and 50ms interval

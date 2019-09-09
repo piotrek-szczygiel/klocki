@@ -79,47 +79,38 @@ fn real_main() -> GameResult {
     Ok(())
 }
 
-struct WindowSettings {
-    toggle_fullscreen: bool,
-    is_fullscreen: bool,
-}
-
 struct Application {
-    window_settings: WindowSettings,
     game: game::Game,
     input: input::Input,
     imgui_wrapper: imgui_wrapper::ImGuiWrapper,
+    is_fullscreen: bool,
 }
 
 impl Application {
     fn new(ctx: &mut Context) -> GameResult<Application> {
-        let window_settings = WindowSettings {
-            toggle_fullscreen: false,
-            is_fullscreen: false,
-        };
-
         let imgui = ImGuiWrapper::new(ctx);
         let mut input = input::Input::new();
 
         Ok(Application {
-            window_settings,
             game: game::Game::new(ctx, &mut input, &imgui)?,
             input,
             imgui_wrapper: imgui,
+            is_fullscreen: false,
         })
     }
 }
 
 impl EventHandler for Application {
     fn update(&mut self, ctx: &mut Context) -> GameResult<()> {
-        if self.window_settings.toggle_fullscreen {
-            let fullscreen_type = if self.window_settings.is_fullscreen {
+        if self.imgui_wrapper.state.toggle_fullscreen {
+            self.imgui_wrapper.state.toggle_fullscreen = false;
+            self.is_fullscreen = !self.is_fullscreen;
+            let fullscreen_type = if self.is_fullscreen {
                 conf::FullscreenType::True
             } else {
                 conf::FullscreenType::Windowed
             };
             graphics::set_fullscreen(ctx, fullscreen_type)?;
-            self.window_settings.toggle_fullscreen = false;
         }
 
         if self.imgui_wrapper.state.restart {
@@ -145,8 +136,7 @@ impl EventHandler for Application {
     fn key_up_event(&mut self, ctx: &mut Context, keycode: KeyCode, _keymods: KeyMods) {
         match keycode {
             KeyCode::F11 => {
-                self.window_settings.toggle_fullscreen = true;
-                self.window_settings.is_fullscreen = !self.window_settings.is_fullscreen;
+                self.imgui_wrapper.state.toggle_fullscreen = true;
             }
             KeyCode::D => self.imgui_wrapper.toggle_window(),
             KeyCode::Escape => event::quit(ctx),
