@@ -11,7 +11,7 @@ mod piece;
 mod shape;
 mod utils;
 
-use crate::imgui_wrapper::ImGuiWrapper;
+use crate::{game::Game, imgui_wrapper::ImGuiWrapper, input::Input};
 
 use env_logger;
 use log::{self, LevelFilter};
@@ -120,6 +120,11 @@ impl EventHandler for Application {
             };
             graphics::set_fullscreen(ctx, fullscreen_type)?;
             self.window_settings.toggle_fullscreen = false;
+        }
+
+        if self.imgui_wrapper.state.restart {
+            self.input = Input::new();
+            self.game = Game::new(ctx, &mut self.input, &self.imgui_wrapper)?;
         }
 
         self.input.update(ctx);

@@ -6,7 +6,6 @@ use crate::{
     matrix::Matrix,
     particles::ParticleAnimation,
     piece::Piece,
-    shape::ShapeType,
     utils,
 };
 
@@ -30,7 +29,7 @@ impl Game {
     pub fn new(ctx: &mut Context, input: &mut Input, imgui: &ImGuiWrapper) -> GameResult<Game> {
         let background = Image::new(ctx, utils::path(ctx, "background.png"))?;
         let matrix = Matrix::new(ctx)?;
-        let bag = Bag::new();
+        let mut bag = Bag::new();
 
         let blocks = Blocks::new(imgui.tileset(ctx)?);
 
@@ -51,7 +50,8 @@ impl Game {
             .bind(KeyCode::LShift, Action::SoftFall, None)
             .bind(KeyCode::C, Action::HoldPiece, None);
 
-        let piece = Piece::new(ShapeType::T, Point2::new(4, 18), 0);
+        // let piece = Piece::new(ShapeType::T);
+        let piece = Piece::new(bag.pop());
 
         Ok(Game {
             matrix,
@@ -79,18 +79,28 @@ impl Game {
             self.blocks = Blocks::new(imgui.tileset(ctx)?);
         }
 
-        while let Some(action) = input.action() {
-            log::trace!("Action: {:?}", action);
+        self.matrix.update(ctx);
 
+        while let Some(action) = input.action() {
             match action {
                 Action::MoveRight => {
-                    self.piece.move_piece(1, 0, &self.matrix);
+                    self.piece.shift(1, 0, &self.matrix);
                 }
                 Action::MoveLeft => {
-                    self.piece.move_piece(-1, 0, &self.matrix);
+                    self.piece.shift(-1, 0, &self.matrix);
                 }
                 Action::MoveDown => {
-                    self.piece.move_piece(0, 1, &self.matrix);
+                    self.piece.shift(0, 1, &self.matrix);
+                }
+                Action::RotateClockwise => {
+                    self.piece.rotate(true, &self.matrix);
+                }
+                Action::RotateCounterClockwise => {
+                    self.piece.rotate(false, &self.matrix);
+                }
+                Action::SoftFall => {
+                    self.matrix.lock(&self.piece);
+                    self.piece = Piece::new(self.bag.pop());
                 }
                 _ => (),
             };

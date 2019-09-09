@@ -1,3 +1,5 @@
+use std::time::Duration;
+
 use crate::{
     blocks::{Blocks, BLOCK_SIZE},
     piece::Piece,
@@ -6,19 +8,21 @@ use crate::{
 use ggez::{
     graphics::{self, Color, DrawParam, Mesh, MeshBuilder},
     nalgebra::Point2,
-    Context, GameResult,
+    timer, Context, GameResult,
 };
 use rand_distr::{Distribution, Uniform};
 
-pub const WIDTH: usize = 10;
-pub const HEIGHT: usize = 20;
-pub const VANISH: usize = 20;
+pub const WIDTH: i32 = 10;
+pub const HEIGHT: i32 = 20;
+pub const VANISH: i32 = 20;
 
-type Grid = [[usize; WIDTH]; HEIGHT + VANISH];
+type Grid = [[usize; WIDTH as usize]; (HEIGHT + VANISH) as usize];
 
 pub struct Matrix {
     grid: Grid,
     grid_mesh: Mesh,
+
+    clearing: Option<(Vec<i32>, Duration)>,
 }
 
 impl Matrix {
@@ -55,36 +59,84 @@ impl Matrix {
         let grid_mesh = grid_mesh.build(ctx)?;
 
         Ok(Matrix {
-            grid: [[0; WIDTH]; HEIGHT + VANISH],
+            grid: [[0; WIDTH as usize]; (HEIGHT + VANISH) as usize],
             grid_mesh,
+            clearing: None,
         })
     }
 
     pub fn clear(&mut self) {
-        self.grid = [[0; WIDTH]; HEIGHT + VANISH];
+        self.grid = [[0; WIDTH as usize]; (HEIGHT + VANISH) as usize];
     }
 
     pub fn collision(&self, piece: &Piece) -> bool {
         let grid = piece.get_grid();
-        let x = piece.position[0] + grid.offset_x;
-        let y = piece.position[1] + grid.offset_y;
+        let x = piece.x + grid.offset_x;
+        let y = piece.y + grid.offset_y;
 
-        if x + grid.width > WIDTH {
-            return true;
-        } else if y + grid.height > HEIGHT + VANISH {
+        if x < 0 || x + grid.width > WIDTH || y < 0 || y + grid.height > HEIGHT + VANISH {
             return true;
         }
 
         for my in 0..grid.height {
             for mx in 0..grid.width {
-                let c = grid.grid[my + grid.offset_y][mx + grid.offset_x];
-                if c != 0 && self.grid[y + my][x + mx] != 0 {
+                let c = grid.grid[(my + grid.offset_y) as usize][(mx + grid.offset_x) as usize];
+                if c != 0 && self.grid[(y + my) as usize][(x + mx) as usize] != 0 {
                     return true;
                 }
             }
         }
 
         false
+    }
+
+    pub fn lock(&mut self, piece: &Piece) -> bool {
+        let grid = piece.get_grid();
+        let x = piece.x + grid.offset_x;
+        let y = piece.y + grid.offset_y;
+
+        if y + grid.height <= VANISH {
+            return false;
+        }
+
+        for my in 0..grid.height {
+            for mx in 0..grid.width {
+                let c = grid.grid[(my + grid.offset_y) as usize][(mx + grid.offset_x) as usize];
+                if c != 0 {
+                    self.grid[(y + my) as usize][(x + mx) as usize] = c;
+                }
+            }
+        }
+
+        self.clear_full_rows();
+        true
+    }
+
+    pub fn blocked(&self) -> bool {
+        self.clearing.is_some()
+    }
+
+    pub fn update(&mut self, ctx: &mut Context) {
+        let mut clear = false;
+        if let Some((_, duration)) = &mut self.clearing {
+            *duration += timer::delta(ctx);
+
+            if *duration > Duration::from_millis(500) {
+                clear = true;
+            }
+        }
+
+        if clear {
+            let rows = self
+                .clearing
+                .as_ref()
+                .unwrap_or(&(vec![], Duration::new(0, 0)))
+                .0
+                .clone();
+
+            self.collapse_rows(&rows);
+            self.clearing = None;
+        }
     }
 
     pub fn draw(
@@ -97,9 +149,9 @@ impl Matrix {
 
         blocks.clear();
 
-        for y in 0..HEIGHT + 1 {
+        for y in 0..=HEIGHT {
             for x in 0..WIDTH {
-                let block = self.grid[VANISH + y - 1][x];
+                let block = self.grid[(VANISH + y - 1) as usize][x as usize];
                 if block == 0 {
                     continue;
                 }
@@ -116,6 +168,52 @@ impl Matrix {
         blocks.draw(ctx)?;
 
         Ok(())
+    }
+
+    fn clear_full_rows(&mut self) {
+        let rows = self.get_full_rows();
+        self.erase_rows(&rows);
+
+        self.clearing = Some((rows, Duration::new(0, 0)));
+    }
+
+    fn get_full_rows(&self) -> Vec<i32> {
+        let mut rows = vec![];
+
+        for y in 0..HEIGHT + VANISH {
+            let mut full = true;
+
+            for x in 0..WIDTH {
+                if self.grid[y as usize][x as usize] == 0 {
+                    full = false;
+                    break;
+                }
+            }
+
+            if full {
+                rows.push(y);
+            }
+        }
+
+        rows
+    }
+
+    fn erase_rows(&mut self, rows: &[i32]) {
+        for &y in rows {
+            for x in 0..WIDTH {
+                self.grid[y as usize][x as usize] = 0;
+            }
+        }
+    }
+
+    fn collapse_rows(&mut self, rows: &[i32]) {
+        for &row in rows {
+            for y in (1..=row).rev() {
+                for x in 0..WIDTH {
+                    self.grid[y as usize][x as usize] = self.grid[y as usize - 1][x as usize];
+                }
+            }
+        }
     }
 
     pub fn debug_tower(&mut self) {

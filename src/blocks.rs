@@ -4,7 +4,7 @@ use ggez::{
     Context, GameResult,
 };
 
-pub const BLOCK_SIZE: usize = 32;
+pub const BLOCK_SIZE: i32 = 32;
 pub const BLOCKS_NUM: usize = 8;
 
 pub struct Blocks {
@@ -14,8 +14,8 @@ pub struct Blocks {
 
 impl Blocks {
     pub fn new(tileset: Image) -> Blocks {
-        if tileset.width() as usize != BLOCK_SIZE * BLOCKS_NUM
-            || tileset.height() as usize != BLOCK_SIZE
+        if tileset.width() as usize != BLOCK_SIZE as usize * BLOCKS_NUM
+            || tileset.height() != BLOCK_SIZE as u16
         {
             log::error!(
                 "Invalid tileset size {}:{}",

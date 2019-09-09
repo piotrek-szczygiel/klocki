@@ -98,7 +98,7 @@ impl ParticleAnimation {
     }
 
     pub fn update(&mut self, ctx: &mut Context) -> GameResult<()> {
-        let dt = utils::dt(ctx);
+        let dt = utils::dt_f32(ctx);
         let pos = utils::mouse_position_coords(ctx);
 
         for particle in &mut self.particles {

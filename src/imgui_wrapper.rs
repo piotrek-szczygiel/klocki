@@ -22,6 +22,8 @@ struct MouseState {
 }
 
 pub struct State {
+    pub restart: bool,
+
     pub debug_t_spin_tower: bool,
 
     pub current_skin_id: usize,
@@ -93,6 +95,7 @@ impl ImGuiWrapper {
             imgui,
             renderer,
             state: State {
+                restart: false,
                 debug_t_spin_tower: false,
                 skin_switched: false,
                 current_skin_id: 0,
@@ -126,6 +129,7 @@ impl ImGuiWrapper {
             let skins_im: Vec<&ImStr> = self.skins_im.iter().map(|s| s.as_ref()).collect();
 
             let mut state = State {
+                restart: false,
                 debug_t_spin_tower: false,
                 skin_switched: false,
                 current_skin_id: self.state.current_skin_id,
@@ -139,6 +143,10 @@ impl ImGuiWrapper {
                     .build(|| {
                         ui.text(im_str!("Debugging"));
                         ui.separator();
+
+                        if ui.small_button(im_str!("Restart")) {
+                            state.restart = true;
+                        }
 
                         if ui.small_button(im_str!("T-Spin tower")) {
                             state.debug_t_spin_tower = true;

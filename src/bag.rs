@@ -1,9 +1,9 @@
 use rand::{seq::SliceRandom, thread_rng};
 
-use crate::shape::Shape;
+use crate::shape::{self, ShapeType};
 
 pub struct Bag {
-    bag: Vec<Shape>,
+    bag: Vec<ShapeType>,
 }
 
 impl Bag {
@@ -16,13 +16,13 @@ impl Bag {
         bag
     }
 
-    pub fn pop(&mut self) -> Option<Shape> {
+    pub fn pop(&mut self) -> ShapeType {
         let shape = self.bag.pop();
         self.fill();
-        shape
+        shape.unwrap()
     }
 
-    pub fn peek(&self, mut n: usize) -> &[Shape] {
+    pub fn peek(&self, mut n: usize) -> &[ShapeType] {
         if self.bag.len() < n {
             n = self.bag.len();
         }
@@ -42,7 +42,7 @@ impl Bag {
     }
 
     fn fill_7(&mut self) {
-        let mut shapes = Shape::get_all_shapes();
+        let mut shapes = shape::all_shape_types();
         shapes.shuffle(&mut thread_rng());
         self.bag.extend(shapes);
     }
@@ -50,8 +50,6 @@ impl Bag {
 
 #[test]
 fn bag_test() {
-    use crate::shape::ShapeType;
-
     let mut bag = Bag::new();
     assert_eq!(14, bag.peek(14).len());
 
@@ -62,13 +60,13 @@ fn bag_test() {
     let mut types = Vec::<ShapeType>::with_capacity(7);
 
     for _ in 0..7 {
-        let shape = bag.pop().unwrap();
-        types.push(shape.shape_type);
+        let shape = bag.pop();
+        types.push(shape);
     }
 
-    let shapes = Shape::get_all_shapes();
+    let shapes = shape::all_shape_types();
 
     for shape in shapes {
-        assert!(types.contains(&shape.shape_type));
+        assert!(types.contains(&shape));
     }
 }
