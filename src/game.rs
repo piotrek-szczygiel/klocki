@@ -3,6 +3,7 @@ use std::time::Duration;
 use crate::{
     bag::Bag,
     blocks::Blocks,
+    holder::Holder,
     imgui_wrapper::ImGuiWrapper,
     input::{Action, Input},
     matrix::{self, Matrix},
@@ -15,7 +16,7 @@ use ggez::{
     audio::{self, SoundSource},
     graphics::{self, Image},
     input::keyboard::KeyCode,
-    nalgebra::Point2,
+    nalgebra::{Point2, Vector2},
     timer, Context, GameResult,
 };
 
@@ -25,6 +26,7 @@ pub struct Game {
     matrix: Matrix,
     piece: Piece,
     bag: Bag,
+    holder: Holder,
 
     game_over: bool,
     still: Duration,
@@ -55,6 +57,7 @@ impl Game {
 
         let matrix = Matrix::new();
         let mut bag = Bag::new();
+        let holder = Holder::new();
 
         let blocks = Blocks::new(imgui.tileset(ctx)?);
 
@@ -75,6 +78,7 @@ impl Game {
             matrix,
             piece,
             bag,
+            holder,
             game_over: false,
             still: Duration::new(0, 0),
             fall_interval: Duration::from_secs(1),
@@ -94,6 +98,7 @@ impl Game {
                 self.game_over = true;
             } else {
                 self.reset_fall();
+                self.holder.unlock();
             }
         }
     }
@@ -169,7 +174,11 @@ impl Game {
                     self.piece.fall(&self.matrix);
                     self.lock_piece();
                 }
-                _ => (),
+                Action::HoldPiece => {
+                    if let Some(shape) = self.holder.hold(self.piece.shape(), &mut self.bag) {
+                        self.piece = Piece::new(shape);
+                    }
+                }
             };
         }
 
@@ -198,14 +207,23 @@ impl Game {
             (1080 - matrix::HEIGHT * block_size) as f32 / 2.0,
         );
 
+        let holder_block_size = block_size * 3 / 4;
+        self.holder.draw(
+            ctx,
+            position - Vector2::new(holder_block_size as f32 * 5.0, 0.0),
+            &mut self.blocks,
+            holder_block_size,
+        )?;
+
         self.matrix
             .draw(ctx, position, &mut self.blocks, block_size)?;
+
         self.piece
             .draw(ctx, position, &mut self.blocks, block_size, 1.0)?;
 
         if imgui.state.ghost_piece {
             let mut ghost = self.piece.clone();
-            if ghost.fall(&self.matrix) > ghost.get_grid().height {
+            if ghost.fall(&self.matrix) > ghost.grid().height {
                 ghost.draw(ctx, position, &mut self.blocks, block_size, 0.1)?;
             }
         }

@@ -107,8 +107,12 @@ impl Piece {
         self.collision(0, 1, matrix)
     }
 
-    pub fn get_grid(&self) -> &ShapeGrid {
+    pub fn grid(&self) -> &ShapeGrid {
         &self.shape.grids[self.rotation]
+    }
+
+    pub fn shape(&self) -> ShapeType {
+        self.shape.shape_type
     }
 
     pub fn draw(

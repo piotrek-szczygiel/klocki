@@ -71,7 +71,7 @@ impl Matrix {
     }
 
     pub fn collision(&self, piece: &Piece) -> bool {
-        let grid = piece.get_grid();
+        let grid = piece.grid();
         let x = piece.x + grid.offset_x;
         let y = piece.y + grid.offset_y;
 
@@ -96,7 +96,7 @@ impl Matrix {
             return false;
         }
 
-        let grid = piece.get_grid();
+        let grid = piece.grid();
         let x = piece.x + grid.offset_x;
         let y = piece.y + grid.offset_y;
 

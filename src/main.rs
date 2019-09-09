@@ -3,6 +3,7 @@
 mod bag;
 mod blocks;
 mod game;
+mod holder;
 mod imgui_wrapper;
 mod input;
 mod matrix;
