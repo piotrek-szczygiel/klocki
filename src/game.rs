@@ -54,7 +54,9 @@ impl Game {
             .bind(KeyCode::Z, Action::RotateCounterClockwise, None)
             .bind(KeyCode::Space, Action::HardFall, None)
             .bind(KeyCode::LShift, Action::SoftFall, None)
-            .bind(KeyCode::C, Action::HoldPiece, None);
+            .bind(KeyCode::C, Action::HoldPiece, None)
+            .exclude(KeyCode::Right, KeyCode::Left)
+            .exclude(KeyCode::Left, KeyCode::Right);
 
         // let piece = Piece::new(ShapeType::T);
         let piece = Piece::new(bag.pop());

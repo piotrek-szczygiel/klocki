@@ -1,13 +1,13 @@
 use std::{
     collections::{HashMap, VecDeque},
-    time::{Duration, Instant},
+    time::Duration,
 };
 
-use ggez::{self, input::keyboard::KeyCode, Context};
+use ggez::{self, input::keyboard::KeyCode, timer, Context};
 
 const MAX_KEYCODES: usize = 161;
 
-#[derive(Copy, Clone, Debug)]
+#[derive(Copy, Clone)]
 pub enum Action {
     MoveRight,
     MoveLeft,
@@ -19,23 +19,22 @@ pub enum Action {
     HoldPiece,
 }
 
-#[derive(Debug)]
 pub struct Repeat {
     delay: Duration,
     interval: Duration,
 }
 
-#[derive(Debug)]
 struct KeyBind {
     actions: Vec<Action>,
     repeat: Option<Repeat>,
 }
 
 pub struct Input {
-    key_activated: Vec<Option<Instant>>,
-    key_repeated: Vec<Option<Instant>>,
+    key_activated: Vec<Option<Duration>>,
+    key_repeated: Vec<Option<Duration>>,
     key_binds: HashMap<KeyCode, KeyBind>,
     actions: VecDeque<Action>,
+    exclusions: HashMap<KeyCode, Vec<KeyCode>>,
 }
 
 impl Input {
@@ -53,6 +52,7 @@ impl Input {
             key_repeated,
             key_binds: HashMap::new(),
             actions: VecDeque::new(),
+            exclusions: HashMap::new(),
         }
     }
 
@@ -88,10 +88,27 @@ impl Input {
         self
     }
 
-    pub fn update(&mut self, ctx: &Context) {
-        let now = Instant::now();
+    pub fn exclude(&mut self, keycode: KeyCode, excludes: KeyCode) -> &mut Input {
+        if let Some(exclusions) = self.exclusions.get_mut(&keycode) {
+            exclusions.push(excludes);
+        } else {
+            self.exclusions.insert(keycode, vec![excludes]);
+        }
 
+        self
+    }
+
+    pub fn update(&mut self, ctx: &Context) {
         let pressed_keys = ggez::input::keyboard::pressed_keys(ctx);
+        let zero = Duration::new(0, 0);
+        let dt = timer::delta(ctx);
+
+        let mut ignore: Vec<KeyCode> = vec![];
+        for exclusion in &self.exclusions {
+            if pressed_keys.contains(&exclusion.0) {
+                ignore.extend(exclusion.1);
+            }
+        }
 
         for (keycode, bind) in &self.key_binds {
             let key = *keycode as usize;
@@ -102,24 +119,32 @@ impl Input {
                 continue;
             }
 
+            if ignore.contains(keycode) {
+                continue;
+            }
+
             let mut active = false;
 
-            match self.key_activated[key] {
+            match self.key_activated[key].as_mut() {
                 None => {
-                    self.key_activated[key] = Some(now);
+                    self.key_activated[key] = Some(zero);
                     active = true;
                 }
                 Some(key_activated) => {
+                    *key_activated += dt;
+
                     if let Some(repeat) = &bind.repeat {
-                        if now - key_activated >= repeat.delay {
-                            match self.key_repeated[key] {
+                        if *key_activated >= repeat.delay {
+                            match self.key_repeated[key].as_mut() {
                                 None => {
-                                    self.key_repeated[key] = Some(now);
+                                    self.key_repeated[key] = Some(zero);
                                     active = true;
                                 }
                                 Some(key_repeated) => {
-                                    if now - key_repeated >= repeat.interval {
-                                        self.key_repeated[key] = Some(now);
+                                    *key_repeated += dt;
+
+                                    if *key_repeated >= repeat.interval {
+                                        *key_repeated = zero;
                                         active = true;
                                     }
                                 }
