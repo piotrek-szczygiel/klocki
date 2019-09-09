@@ -2,10 +2,10 @@ use std::time::Duration;
 
 use crate::{
     bag::Bag,
-    blocks::Blocks,
+    blocks::{self, Blocks},
     imgui_wrapper::ImGuiWrapper,
     input::{Action, Input},
-    matrix::Matrix,
+    matrix::{self, Matrix},
     particles::ParticleAnimation,
     piece::Piece,
     utils,
@@ -90,7 +90,11 @@ impl Game {
             self.game_over = true;
         } else {
             self.piece = Piece::new(self.bag.pop());
+            if self.matrix.collision(&self.piece) {
+                self.game_over = true;
+            } else {
             self.reset_fall();
+            }
         }
     }
 
@@ -123,10 +127,18 @@ impl Game {
         while let Some(action) = self.input.action() {
             match action {
                 Action::MoveRight => {
-                    self.piece.shift(1, 0, &self.matrix);
+                    if self.piece.shift(1, 0, &self.matrix)
+                        && self.piece.touching_floor(&self.matrix)
+                    {
+                        self.reset_fall();
+                    }
                 }
                 Action::MoveLeft => {
-                    self.piece.shift(-1, 0, &self.matrix);
+                    if self.piece.shift(-1, 0, &self.matrix)
+                        && self.piece.touching_floor(&self.matrix)
+                    {
+                        self.reset_fall();
+                    }
                 }
                 Action::MoveDown => {
                     if self.piece.shift(0, 1, &self.matrix) {
@@ -134,10 +146,18 @@ impl Game {
                     }
                 }
                 Action::RotateClockwise => {
-                    self.piece.rotate(true, &self.matrix);
+                    if self.piece.rotate(true, &self.matrix)
+                        && self.piece.touching_floor(&self.matrix)
+                    {
+                        self.reset_fall();
+                    }
                 }
                 Action::RotateCounterClockwise => {
-                    self.piece.rotate(false, &self.matrix);
+                    if self.piece.rotate(false, &self.matrix)
+                        && self.piece.touching_floor(&self.matrix)
+                    {
+                        self.reset_fall();
+                    }
                 }
                 Action::SoftFall => {
                     let rows = self.piece.fall(&self.matrix);
@@ -171,7 +191,10 @@ impl Game {
 
         self.particle_animation.draw(ctx)?;
 
-        let position = Point2::new(400.0, 200.0);
+        let position = Point2::new(
+            (1920 - matrix::WIDTH * blocks::BLOCK_SIZE) as f32 / 2.0,
+            (1080 - matrix::HEIGHT * blocks::BLOCK_SIZE) as f32 / 2.0,
+        );
 
         self.matrix.draw(ctx, position, &mut self.blocks)?;
 

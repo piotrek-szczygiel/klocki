@@ -1,22 +1,23 @@
 use ggez::{
     graphics::{self, spritebatch::SpriteBatch, Color, DrawParam, Image, Rect},
-    nalgebra::Point2,
+    nalgebra::{Point2, Vector2},
     Context, GameResult,
 };
 
-pub const BLOCK_SIZE: i32 = 32;
+pub const BLOCK_SIZE: i32 = 40;
 pub const BLOCKS_NUM: usize = 8;
 
 pub struct Blocks {
     batch: SpriteBatch,
     rects: Vec<Rect>,
+    scale: Vector2<f32>,
 }
 
 impl Blocks {
     pub fn new(tileset: Image) -> Blocks {
-        if tileset.width() as usize != BLOCK_SIZE as usize * BLOCKS_NUM
-            || tileset.height() != BLOCK_SIZE as u16
-        {
+        let size = tileset.width() as usize / BLOCKS_NUM;
+
+        if tileset.height() as usize != size {
             log::error!(
                 "Invalid tileset size {}:{}",
                 tileset.width(),
@@ -38,7 +39,14 @@ impl Blocks {
             ));
         }
 
-        Blocks { batch, rects }
+        let scale = BLOCK_SIZE as f32 / size as f32;
+        let scale = Vector2::new(scale, scale);
+
+        Blocks {
+            batch,
+            rects,
+            scale,
+        }
     }
 
     pub fn clear(&mut self) {
@@ -52,6 +60,7 @@ impl Blocks {
                     DrawParam::new()
                         .src(self.rects[block_id - 1])
                         .dest(dest)
+                        .scale(self.scale)
                         .color(Color::new(1.0, 1.0, 1.0, alpha)),
                 );
             }

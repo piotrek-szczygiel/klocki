@@ -6,6 +6,13 @@ use crate::{
 use ggez::{self, nalgebra::Point2, Context, GameResult};
 
 #[derive(Clone)]
+pub enum Movement {
+    None,
+    Shift,
+    Rotate,
+}
+
+#[derive(Clone)]
 pub struct Piece {
     shape: Shape,
     pub x: i32,
@@ -14,12 +21,6 @@ pub struct Piece {
     last_movement: Movement,
 }
 
-#[derive(Clone)]
-pub enum Movement {
-    None,
-    Shift,
-    Rotate,
-}
 
 impl Piece {
     pub fn new(shape_type: ShapeType) -> Piece {
@@ -101,6 +102,10 @@ impl Piece {
         }
 
         rows
+    }
+
+    pub fn touching_floor(&mut self, matrix: &Matrix) -> bool {
+        self.collision(0, 1, matrix)
     }
 
     pub fn get_grid(&self) -> &ShapeGrid {
