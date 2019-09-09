@@ -31,6 +31,7 @@ pub struct State {
     pub current_scale: f32,
     pub ghost_piece: bool,
     pub block_size: i32,
+    pub background: bool,
 }
 
 pub struct ImGuiWrapper {
@@ -104,6 +105,7 @@ impl ImGuiWrapper {
                 current_scale: graphics::size(ctx).0 / 1920.0,
                 ghost_piece: true,
                 block_size: 32,
+                background: true,
             },
             last_frame: Instant::now(),
             mouse_state: MouseState::default(),
@@ -203,13 +205,21 @@ impl ImGuiWrapper {
                     ui.separator();
                     ui.text(im_str!("Block size"));
                     ui.push_id(2);
-                    ui.slider_int(im_str!(""), &mut state.block_size, 16, 48)
+                    ui.slider_int(im_str!(""), &mut state.block_size, 16, 44)
                         .build();
                     ui.pop_id();
 
                     ui.separator();
                     ui.text(im_str!("Ghost piece"));
+                    ui.push_id(3);
                     ui.checkbox(im_str!("Enabled"), &mut state.ghost_piece);
+                    ui.pop_id();
+
+                    ui.separator();
+                    ui.text(im_str!("Animated background"));
+                    ui.push_id(4);
+                    ui.checkbox(im_str!("Enabled"), &mut state.background);
+                    ui.pop_id();
                 });
 
                 ui.separator();

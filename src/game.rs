@@ -112,7 +112,9 @@ impl Game {
     }
 
     pub fn update(&mut self, ctx: &mut Context, imgui: &ImGuiWrapper) -> GameResult<()> {
-        self.particle_animation.update(ctx)?;
+        if imgui.state.background {
+            self.particle_animation.update(ctx)?;
+        }
 
         if imgui.state.debug_t_spin_tower {
             self.matrix.debug_tower();
@@ -207,12 +209,20 @@ impl Game {
             (1080 - matrix::HEIGHT * block_size) as f32 / 2.0,
         );
 
-        let holder_block_size = block_size * 3 / 4;
+        let ui_block_size = block_size * 3 / 4;
+
         self.holder.draw(
             ctx,
-            position - Vector2::new(holder_block_size as f32 * 5.0, 0.0),
+            position - Vector2::new(ui_block_size as f32 * 5.0, 0.0),
             &mut self.blocks,
-            holder_block_size,
+            ui_block_size,
+        )?;
+
+        self.bag.draw(
+            ctx,
+            position + Vector2::new(((matrix::WIDTH + 1) * block_size) as f32, 0.0),
+            &mut self.blocks,
+            ui_block_size,
         )?;
 
         self.matrix
@@ -223,7 +233,7 @@ impl Game {
 
         if imgui.state.ghost_piece {
             let mut ghost = self.piece.clone();
-            if ghost.fall(&self.matrix) > ghost.grid().height {
+            if ghost.fall(&self.matrix) >= ghost.grid().height {
                 ghost.draw(ctx, position, &mut self.blocks, block_size, 0.1)?;
             }
         }

@@ -1,15 +1,27 @@
+use std::{
+    collections::{vec_deque::Iter, VecDeque},
+    iter::Take,
+};
+
+use crate::{
+    blocks::Blocks,
+    shape::{self, Shape, ShapeType},
+};
+
+use ggez::{
+    nalgebra::{Point2, Vector2},
+    Context, GameResult,
+};
 use rand::{seq::SliceRandom, thread_rng};
 
-use crate::shape::{self, ShapeType};
-
 pub struct Bag {
-    bag: Vec<ShapeType>,
+    bag: VecDeque<ShapeType>,
 }
 
 impl Bag {
     pub fn new() -> Bag {
         let mut bag = Bag {
-            bag: Vec::with_capacity(14),
+            bag: VecDeque::with_capacity(14),
         };
 
         bag.fill();
@@ -17,17 +29,28 @@ impl Bag {
     }
 
     pub fn pop(&mut self) -> ShapeType {
-        let shape = self.bag.pop();
+        let shape = self.bag.pop_front();
         self.fill();
         shape.unwrap()
     }
 
-    pub fn peek(&self, mut n: usize) -> &[ShapeType] {
-        if self.bag.len() < n {
-            n = self.bag.len();
+    pub fn peek(&self, n: usize) -> Take<Iter<'_, ShapeType>> {
+        self.bag.iter().take(n)
+    }
+
+    pub fn draw(
+        &self,
+        ctx: &mut Context,
+        position: Point2<f32>,
+        blocks: &mut Blocks,
+        block_size: i32,
+    ) -> GameResult {
+        for (i, &shape) in self.peek(6).enumerate() {
+            let position = position + Vector2::new(0.0, (i as i32 * block_size * 4) as f32);
+            Shape::new(shape).draw(ctx, 0, position, blocks, block_size, 0.9)?;
         }
 
-        &self.bag[..n]
+        Ok(())
     }
 
     fn fill(&mut self) {
