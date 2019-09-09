@@ -132,7 +132,14 @@ impl ImGuiWrapper {
             let skins_im_len = self.skins_im.len() as i32;
             let skins_im: Vec<&ImStr> = self.skins_im.iter().map(|s| s.as_ref()).collect();
 
-            let mut state = self.state;
+            let mut state = State {
+                restart: false,
+                debug_t_spin_tower: false,
+                skin_switched: false,
+                toggle_fullscreen: false,
+
+                ..self.state
+            };
 
             if self.show_debug_window {
                 ui.window(im_str!("Debug"))
