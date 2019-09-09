@@ -91,6 +91,10 @@ impl Matrix {
     }
 
     pub fn lock(&mut self, piece: &Piece) -> bool {
+        if self.collision(&piece) {
+            return false;
+        }
+
         let grid = piece.get_grid();
         let x = piece.x + grid.offset_x;
         let y = piece.y + grid.offset_y;
@@ -172,9 +176,11 @@ impl Matrix {
 
     fn clear_full_rows(&mut self) {
         let rows = self.get_full_rows();
-        self.erase_rows(&rows);
 
-        self.clearing = Some((rows, Duration::new(0, 0)));
+        if !rows.is_empty() {
+            self.erase_rows(&rows);
+            self.clearing = Some((rows, Duration::new(0, 0)));
+        }
     }
 
     fn get_full_rows(&self) -> Vec<i32> {

@@ -88,15 +88,17 @@ impl Piece {
         rotated
     }
 
-    fn collision(&mut self, x: i32, y: i32, matrix: &Matrix) -> bool {
-        self.x += x;
-        self.y += y;
+    pub fn fall(&mut self, matrix: &Matrix) -> i32 {
+        let mut rows = 0;
+        while self.shift(0, 1, &matrix) {
+            rows += 1;
+        }
 
-        let result = matrix.collision(&self);
+        if rows > 0 {
+            self.last_movement = Movement::None;
+        }
 
-        self.x -= x;
-        self.y -= y;
-        result
+        rows
     }
 
     pub fn get_grid(&self) -> &ShapeGrid {
@@ -135,5 +137,16 @@ impl Piece {
         blocks.draw(ctx)?;
 
         Ok(())
+    }
+
+    fn collision(&mut self, x: i32, y: i32, matrix: &Matrix) -> bool {
+        self.x += x;
+        self.y += y;
+
+        let result = matrix.collision(&self);
+
+        self.x -= x;
+        self.y -= y;
+        result
     }
 }

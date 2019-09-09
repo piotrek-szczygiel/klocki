@@ -1,3 +1,5 @@
+use std::time::Duration;
+
 use crate::{
     bag::Bag,
     blocks::Blocks,
@@ -14,13 +16,20 @@ use ggez::{
     graphics::{self, Image},
     input::keyboard::KeyCode,
     nalgebra::Point2,
-    Context, GameResult,
+    timer, Context, GameResult,
 };
 
 pub struct Game {
+    input: Input,
+
     matrix: Matrix,
     piece: Piece,
     bag: Bag,
+
+    game_over: bool,
+    still: Duration,
+    fall_interval: Duration,
+
     blocks: Blocks,
     particle_animation: ParticleAnimation,
     background: Image,
@@ -28,24 +37,9 @@ pub struct Game {
 }
 
 impl Game {
-    pub fn new(ctx: &mut Context, input: &mut Input, imgui: &ImGuiWrapper) -> GameResult<Game> {
-        let matrix = Matrix::new(ctx)?;
-        let mut bag = Bag::new();
-
-        let blocks = Blocks::new(imgui.tileset(ctx)?);
-
-        let rect = graphics::screen_coordinates(ctx);
-        let particle_animation = ParticleAnimation::new(120, 200.0, 80.0, rect.w, rect.h);
-
-        let background = Image::new(ctx, utils::path(ctx, "background.png"))?;
-        let mut theme = audio::Source::new(ctx, utils::path(ctx, "main_theme.ogg"))?;
-        theme.set_repeat(true);
-        theme.set_volume(0.2);
-        theme.play()?;
-
-        // Default is 150ms delay and 50ms interval
+    pub fn new(ctx: &mut Context, imgui: &ImGuiWrapper) -> GameResult<Game> {
         let repeat = Some((150, 50));
-
+        let mut input = Input::new();
         input
             .bind(KeyCode::Right, Action::MoveRight, repeat)
             .bind(KeyCode::Left, Action::MoveLeft, repeat)
@@ -59,13 +53,31 @@ impl Game {
             .exclude(KeyCode::Right, KeyCode::Left)
             .exclude(KeyCode::Left, KeyCode::Right);
 
-        // let piece = Piece::new(ShapeType::T);
+        let matrix = Matrix::new(ctx)?;
+        let mut bag = Bag::new();
+
+        let blocks = Blocks::new(imgui.tileset(ctx)?);
+
+        let rect = graphics::screen_coordinates(ctx);
+        let particle_animation = ParticleAnimation::new(120, 200.0, 80.0, rect.w, rect.h);
+
+        let background = Image::new(ctx, utils::path(ctx, "background.png"))?;
+
+        let mut theme = audio::Source::new(ctx, utils::path(ctx, "main_theme.ogg"))?;
+        theme.set_repeat(true);
+        theme.set_volume(0.2);
+        theme.play()?;
+
         let piece = Piece::new(bag.pop());
 
         Ok(Game {
+            input,
             matrix,
             piece,
             bag,
+            game_over: false,
+            still: Duration::new(0, 0),
+            fall_interval: Duration::from_secs(1),
             blocks,
             particle_animation,
             background,
@@ -73,12 +85,24 @@ impl Game {
         })
     }
 
-    pub fn update(
-        &mut self,
-        ctx: &mut Context,
-        input: &mut Input,
-        imgui: &ImGuiWrapper,
-    ) -> GameResult<()> {
+    fn lock_piece(&mut self) {
+        if !self.matrix.lock(&self.piece) {
+            self.game_over = true;
+        } else {
+            self.piece = Piece::new(self.bag.pop());
+            self.reset_fall();
+        }
+    }
+
+    fn reset_fall(&mut self) {
+        if self.still > self.fall_interval {
+            self.still -= self.fall_interval;
+        } else {
+            self.still = Duration::new(0, 0);
+        }
+    }
+
+    pub fn update(&mut self, ctx: &mut Context, imgui: &ImGuiWrapper) -> GameResult<()> {
         self.particle_animation.update(ctx)?;
 
         if imgui.state.debug_t_spin_tower {
@@ -90,8 +114,13 @@ impl Game {
         }
 
         self.matrix.update(ctx);
+        if self.game_over || self.matrix.blocked() {
+            return Ok(());
+        }
 
-        while let Some(action) = input.action() {
+        self.input.update(ctx);
+
+        while let Some(action) = self.input.action() {
             match action {
                 Action::MoveRight => {
                     self.piece.shift(1, 0, &self.matrix);
@@ -100,7 +129,9 @@ impl Game {
                     self.piece.shift(-1, 0, &self.matrix);
                 }
                 Action::MoveDown => {
-                    self.piece.shift(0, 1, &self.matrix);
+                    if self.piece.shift(0, 1, &self.matrix) {
+                        self.reset_fall();
+                    }
                 }
                 Action::RotateClockwise => {
                     self.piece.rotate(true, &self.matrix);
@@ -109,11 +140,27 @@ impl Game {
                     self.piece.rotate(false, &self.matrix);
                 }
                 Action::SoftFall => {
-                    self.matrix.lock(&self.piece);
-                    self.piece = Piece::new(self.bag.pop());
+                    let rows = self.piece.fall(&self.matrix);
+                    if rows > 0 {
+                        self.reset_fall();
+                    }
+                }
+                Action::HardFall => {
+                    self.piece.fall(&self.matrix);
+                    self.lock_piece();
                 }
                 _ => (),
             };
+        }
+
+        self.still += timer::delta(ctx);
+
+        if self.still >= self.fall_interval {
+            self.still -= self.fall_interval;
+
+            if !self.piece.shift(0, 1, &self.matrix) {
+                self.lock_piece();
+            }
         }
 
         Ok(())

@@ -11,7 +11,7 @@ mod piece;
 mod shape;
 mod utils;
 
-use crate::{game::Game, imgui_wrapper::ImGuiWrapper, input::Input};
+use crate::{game::Game, imgui_wrapper::ImGuiWrapper};
 
 use env_logger;
 use log::{self, LevelFilter};
@@ -81,7 +81,6 @@ fn real_main() -> GameResult {
 
 struct Application {
     game: game::Game,
-    input: input::Input,
     imgui_wrapper: imgui_wrapper::ImGuiWrapper,
     is_fullscreen: bool,
 }
@@ -89,11 +88,9 @@ struct Application {
 impl Application {
     fn new(ctx: &mut Context) -> GameResult<Application> {
         let imgui = ImGuiWrapper::new(ctx);
-        let mut input = input::Input::new();
 
         Ok(Application {
-            game: game::Game::new(ctx, &mut input, &imgui)?,
-            input,
+            game: game::Game::new(ctx, &imgui)?,
             imgui_wrapper: imgui,
             is_fullscreen: false,
         })
@@ -114,13 +111,10 @@ impl EventHandler for Application {
         }
 
         if self.imgui_wrapper.state.restart {
-            self.input = Input::new();
-            self.game = Game::new(ctx, &mut self.input, &self.imgui_wrapper)?;
+            self.game = Game::new(ctx, &self.imgui_wrapper)?;
         }
 
-        self.input.update(ctx);
-        self.game
-            .update(ctx, &mut self.input, &self.imgui_wrapper)?;
+        self.game.update(ctx, &self.imgui_wrapper)?;
 
         Ok(())
     }
