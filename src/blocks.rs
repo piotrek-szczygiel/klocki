@@ -4,20 +4,19 @@ use ggez::{
     Context, GameResult,
 };
 
-pub const BLOCK_SIZE: i32 = 40;
 pub const BLOCKS_NUM: usize = 8;
 
 pub struct Blocks {
     batch: SpriteBatch,
     rects: Vec<Rect>,
-    scale: Vector2<f32>,
+    tileset_size: i32,
 }
 
 impl Blocks {
     pub fn new(tileset: Image) -> Blocks {
-        let size = tileset.width() as usize / BLOCKS_NUM;
+        let tileset_size = (tileset.width() as usize / BLOCKS_NUM) as i32;
 
-        if tileset.height() as usize != size {
+        if tileset.height() != tileset_size as u16 {
             log::error!(
                 "Invalid tileset size {}:{}",
                 tileset.width(),
@@ -39,13 +38,10 @@ impl Blocks {
             ));
         }
 
-        let scale = BLOCK_SIZE as f32 / size as f32;
-        let scale = Vector2::new(scale, scale);
-
         Blocks {
             batch,
             rects,
-            scale,
+            tileset_size,
         }
     }
 
@@ -53,14 +49,17 @@ impl Blocks {
         self.batch.clear();
     }
 
-    pub fn add(&mut self, block_id: usize, dest: Point2<f32>, alpha: f32) {
+    pub fn add(&mut self, block_id: usize, size: i32, dest: Point2<f32>, alpha: f32) {
+        let scale = size as f32 / self.tileset_size as f32;
+        let scale = Vector2::new(scale, scale);
+
         match block_id {
             1..=BLOCKS_NUM => {
                 self.batch.add(
                     DrawParam::new()
                         .src(self.rects[block_id - 1])
                         .dest(dest)
-                        .scale(self.scale)
+                        .scale(scale)
                         .color(Color::new(1.0, 1.0, 1.0, alpha)),
                 );
             }

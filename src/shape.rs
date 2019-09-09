@@ -1,3 +1,7 @@
+use crate::blocks::Blocks;
+
+use ggez::{nalgebra::Point2, Context, GameResult};
+
 pub type Kick = [(i32, i32); 4];
 pub type Kicks = [(Kick, Kick); 4];
 
@@ -90,6 +94,40 @@ pub struct Shape {
 }
 
 impl Shape {
+    pub fn draw(
+        &self,
+        ctx: &mut Context,
+        rotation: usize,
+        position: Point2<f32>,
+        blocks: &mut Blocks,
+        block_size: i32,
+        alpha: f32,
+    ) -> GameResult {
+        blocks.clear();
+
+        let grid = &self.grids[rotation];
+
+        for y in 0..4 {
+            for x in 0..4 {
+                let block = grid.grid[y][x];
+                if block == 0 {
+                    continue;
+                }
+
+                let dest = Point2::new(
+                    position[0] + (x as i32 * block_size) as f32,
+                    position[1] + (y as i32 * block_size) as f32,
+                );
+
+                blocks.add(block, block_size, dest, alpha);
+            }
+        }
+
+        blocks.draw(ctx)?;
+
+        Ok(())
+    }
+
     pub fn new(shape_type: ShapeType) -> Shape {
         match shape_type {
             ShapeType::Z => {

@@ -21,19 +21,16 @@ struct MouseState {
     wheel: f32,
 }
 
+#[derive(Copy, Clone)]
 pub struct State {
     pub restart: bool,
-
     pub debug_t_spin_tower: bool,
-
     pub current_skin_id: usize,
     pub skin_switched: bool,
-
     pub toggle_fullscreen: bool,
-
     pub current_scale: f32,
-
     pub ghost_piece: bool,
+    pub block_size: i32,
 }
 
 pub struct ImGuiWrapper {
@@ -106,6 +103,7 @@ impl ImGuiWrapper {
                 toggle_fullscreen: false,
                 current_scale: graphics::size(ctx).0 / 1920.0,
                 ghost_piece: true,
+                block_size: 32,
             },
             last_frame: Instant::now(),
             mouse_state: MouseState::default(),
@@ -134,15 +132,7 @@ impl ImGuiWrapper {
             let skins_im_len = self.skins_im.len() as i32;
             let skins_im: Vec<&ImStr> = self.skins_im.iter().map(|s| s.as_ref()).collect();
 
-            let mut state = State {
-                restart: false,
-                debug_t_spin_tower: false,
-                skin_switched: false,
-                current_skin_id: self.state.current_skin_id,
-                toggle_fullscreen: false,
-                current_scale: self.state.current_scale,
-                ghost_piece: self.state.ghost_piece,
-            };
+            let mut state = self.state;
 
             if self.show_debug_window {
                 ui.window(im_str!("Debug"))
@@ -204,7 +194,15 @@ impl ImGuiWrapper {
                     ui.pop_id();
 
                     ui.separator();
-                    ui.checkbox(im_str!("Ghost piece"), &mut state.ghost_piece);
+                    ui.text(im_str!("Block size"));
+                    ui.push_id(2);
+                    ui.slider_int(im_str!(""), &mut state.block_size, 16, 48)
+                        .build();
+                    ui.pop_id();
+
+                    ui.separator();
+                    ui.text(im_str!("Ghost piece"));
+                    ui.checkbox(im_str!("Enabled"), &mut state.ghost_piece);
                 });
 
                 ui.separator();

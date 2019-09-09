@@ -2,7 +2,7 @@ use std::time::Duration;
 
 use crate::{
     bag::Bag,
-    blocks::{self, Blocks},
+    blocks::Blocks,
     imgui_wrapper::ImGuiWrapper,
     input::{Action, Input},
     matrix::{self, Matrix},
@@ -53,7 +53,7 @@ impl Game {
             .exclude(KeyCode::Right, KeyCode::Left)
             .exclude(KeyCode::Left, KeyCode::Right);
 
-        let matrix = Matrix::new(ctx)?;
+        let matrix = Matrix::new();
         let mut bag = Bag::new();
 
         let blocks = Blocks::new(imgui.tileset(ctx)?);
@@ -93,7 +93,7 @@ impl Game {
             if self.matrix.collision(&self.piece) {
                 self.game_over = true;
             } else {
-            self.reset_fall();
+                self.reset_fall();
             }
         }
     }
@@ -189,21 +189,24 @@ impl Game {
     pub fn draw(&mut self, ctx: &mut Context, imgui: &ImGuiWrapper) -> GameResult<()> {
         graphics::draw(ctx, &self.background, graphics::DrawParam::new())?;
 
+        let block_size = imgui.state.block_size;
+
         self.particle_animation.draw(ctx)?;
 
         let position = Point2::new(
-            (1920 - matrix::WIDTH * blocks::BLOCK_SIZE) as f32 / 2.0,
-            (1080 - matrix::HEIGHT * blocks::BLOCK_SIZE) as f32 / 2.0,
+            (1920 - matrix::WIDTH * block_size) as f32 / 2.0,
+            (1080 - matrix::HEIGHT * block_size) as f32 / 2.0,
         );
 
-        self.matrix.draw(ctx, position, &mut self.blocks)?;
-
-        self.piece.draw(ctx, position, &mut self.blocks, 1.0)?;
+        self.matrix
+            .draw(ctx, position, &mut self.blocks, block_size)?;
+        self.piece
+            .draw(ctx, position, &mut self.blocks, block_size, 1.0)?;
 
         if imgui.state.ghost_piece {
             let mut ghost = self.piece.clone();
             if ghost.fall(&self.matrix) > ghost.get_grid().height {
-                ghost.draw(ctx, position, &mut self.blocks, 0.1)?;
+                ghost.draw(ctx, position, &mut self.blocks, block_size, 0.1)?;
             }
         }
 

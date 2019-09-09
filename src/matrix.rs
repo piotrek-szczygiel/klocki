@@ -1,9 +1,6 @@
 use std::time::Duration;
 
-use crate::{
-    blocks::{Blocks, BLOCK_SIZE},
-    piece::Piece,
-};
+use crate::{blocks::Blocks, piece::Piece};
 
 use ggez::{
     graphics::{self, Color, DrawParam, Mesh, MeshBuilder},
@@ -20,23 +17,31 @@ type Grid = [[usize; WIDTH as usize]; (HEIGHT + VANISH) as usize];
 
 pub struct Matrix {
     grid: Grid,
-    grid_mesh: Mesh,
+    grid_mesh: Option<(Mesh, i32)>,
 
     clearing: Option<(Vec<i32>, Duration)>,
 }
 
 impl Matrix {
-    pub fn new(ctx: &mut Context) -> GameResult<Matrix> {
+    pub fn new() -> Matrix {
+        Matrix {
+            grid: [[0; WIDTH as usize]; (HEIGHT + VANISH) as usize],
+            grid_mesh: None,
+            clearing: None,
+        }
+    }
+
+    pub fn build_grid(&mut self, ctx: &mut Context, block_size: i32) -> GameResult {
         let grid_mesh = &mut MeshBuilder::new();
         let grid_color = Color::new(0.2, 0.2, 0.2, 1.0);
 
         for x in 0..=WIDTH {
-            let x = (x * BLOCK_SIZE) as f32;
+            let x = (x * block_size) as f32;
 
             grid_mesh.line(
                 &[
                     Point2::new(x, 0.0),
-                    Point2::new(x, (BLOCK_SIZE * HEIGHT) as f32),
+                    Point2::new(x, (block_size * HEIGHT) as f32),
                 ],
                 1.0,
                 grid_color,
@@ -44,25 +49,21 @@ impl Matrix {
         }
 
         for y in 0..=HEIGHT {
-            let y = (y * BLOCK_SIZE) as f32;
+            let y = (y * block_size) as f32;
 
             grid_mesh.line(
                 &[
                     Point2::new(0.0, y),
-                    Point2::new((BLOCK_SIZE * WIDTH) as f32, y),
+                    Point2::new((block_size * WIDTH) as f32, y),
                 ],
                 1.0,
                 grid_color,
             )?;
         }
 
-        let grid_mesh = grid_mesh.build(ctx)?;
+        self.grid_mesh = Some((grid_mesh.build(ctx)?, block_size));
 
-        Ok(Matrix {
-            grid: [[0; WIDTH as usize]; (HEIGHT + VANISH) as usize],
-            grid_mesh,
-            clearing: None,
-        })
+        Ok(())
     }
 
     pub fn clear(&mut self) {
@@ -148,8 +149,24 @@ impl Matrix {
         ctx: &mut Context,
         position: Point2<f32>,
         blocks: &mut Blocks,
+        block_size: i32,
     ) -> GameResult {
-        graphics::draw(ctx, &self.grid_mesh, DrawParam::new().dest(position))?;
+        if self.grid_mesh.is_none() {
+            self.build_grid(ctx, block_size)?;
+        } else {
+            let old_size = self.grid_mesh.as_ref().unwrap().1;
+
+            if block_size != old_size {
+                self.build_grid(ctx, block_size)?;
+                self.grid_mesh.as_mut().unwrap().1 = block_size;
+            }
+        }
+
+        graphics::draw(
+            ctx,
+            &self.grid_mesh.as_ref().unwrap().0,
+            DrawParam::new().dest(position),
+        )?;
 
         blocks.clear();
 
@@ -161,11 +178,11 @@ impl Matrix {
                 }
 
                 let dest = Point2::new(
-                    position[0] + (x * BLOCK_SIZE) as f32,
-                    position[1] + ((y - 1) * BLOCK_SIZE) as f32,
+                    position[0] + (x * block_size) as f32,
+                    position[1] + ((y - 1) * block_size) as f32,
                 );
 
-                blocks.add(block, dest, 0.5);
+                blocks.add(block, block_size, dest, 0.5);
             }
         }
 

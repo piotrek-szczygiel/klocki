@@ -1,5 +1,5 @@
 use crate::{
-    blocks::{Blocks, BLOCK_SIZE},
+    blocks::Blocks,
     matrix::{self, Matrix},
     shape::{Shape, ShapeGrid, ShapeType},
 };
@@ -20,7 +20,6 @@ pub struct Piece {
     rotation: usize,
     last_movement: Movement,
 }
-
 
 impl Piece {
     pub fn new(shape_type: ShapeType) -> Piece {
@@ -113,36 +112,22 @@ impl Piece {
     }
 
     pub fn draw(
-        &mut self,
+        &self,
         ctx: &mut Context,
         position: Point2<f32>,
         blocks: &mut Blocks,
+        block_size: i32,
         alpha: f32,
     ) -> GameResult {
         blocks.clear();
 
-        let grid = self.get_grid();
+        let position = Point2::new(
+            position[0] + (self.x * block_size) as f32,
+            position[1] + ((self.y - matrix::VANISH) * block_size) as f32,
+        );
 
-        for y in 0..4 {
-            for x in 0..4 {
-                let block = grid.grid[y][x];
-                if block == 0 {
-                    continue;
-                }
-
-                let x = self.x + x as i32;
-                let y = self.y + y as i32 - matrix::VANISH;
-
-                let dest = Point2::new(
-                    position[0] + (x * BLOCK_SIZE) as f32,
-                    position[1] + (y * BLOCK_SIZE) as f32,
-                );
-
-                blocks.add(block, dest, alpha);
-            }
-        }
-
-        blocks.draw(ctx)?;
+        self.shape
+            .draw(ctx, self.rotation, position, blocks, block_size, alpha)?;
 
         Ok(())
     }
