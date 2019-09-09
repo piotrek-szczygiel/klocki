@@ -5,6 +5,7 @@ use crate::{
 };
 use ggez::{self, nalgebra::Point2, Context, GameResult};
 
+#[derive(Clone)]
 pub struct Piece {
     shape: Shape,
     pub x: i32,
@@ -13,6 +14,7 @@ pub struct Piece {
     last_movement: Movement,
 }
 
+#[derive(Clone)]
 pub enum Movement {
     None,
     Shift,
@@ -110,6 +112,7 @@ impl Piece {
         ctx: &mut Context,
         position: Point2<f32>,
         blocks: &mut Blocks,
+        alpha: f32,
     ) -> GameResult {
         blocks.clear();
 
@@ -130,7 +133,7 @@ impl Piece {
                     position[1] + (y * BLOCK_SIZE) as f32,
                 );
 
-                blocks.add(block, dest);
+                blocks.add(block, dest, alpha);
             }
         }
 

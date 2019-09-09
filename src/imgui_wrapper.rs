@@ -32,6 +32,8 @@ pub struct State {
     pub toggle_fullscreen: bool,
 
     pub current_scale: f32,
+
+    pub ghost_piece: bool,
 }
 
 pub struct ImGuiWrapper {
@@ -103,6 +105,7 @@ impl ImGuiWrapper {
                 current_skin_id: 0,
                 toggle_fullscreen: false,
                 current_scale: graphics::size(ctx).0 / 1920.0,
+                ghost_piece: true,
             },
             last_frame: Instant::now(),
             mouse_state: MouseState::default(),
@@ -138,6 +141,7 @@ impl ImGuiWrapper {
                 current_skin_id: self.state.current_skin_id,
                 toggle_fullscreen: false,
                 current_scale: self.state.current_scale,
+                ghost_piece: self.state.ghost_piece,
             };
 
             if self.show_debug_window {
@@ -172,7 +176,6 @@ impl ImGuiWrapper {
                     }
 
                     ui.separator();
-
                     ui.text(im_str!("Window scale"));
                     ui.push_id(0);
                     if ui
@@ -191,7 +194,6 @@ impl ImGuiWrapper {
                     ui.pop_id();
 
                     ui.separator();
-
                     ui.text(im_str!("Blocks skin"));
                     let mut current_skin_id = state.current_skin_id as i32;
                     ui.push_id(1);
@@ -200,6 +202,9 @@ impl ImGuiWrapper {
                         state.skin_switched = true;
                     }
                     ui.pop_id();
+
+                    ui.separator();
+                    ui.checkbox(im_str!("Ghost piece"), &mut state.ghost_piece);
                 });
 
                 ui.separator();

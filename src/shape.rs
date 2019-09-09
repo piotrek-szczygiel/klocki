@@ -39,6 +39,7 @@ const KICKS_I: Kicks = [
     ),
 ];
 
+#[derive(Clone)]
 pub struct ShapeGrid {
     pub offset_x: i32,
     pub offset_y: i32,
@@ -81,6 +82,7 @@ pub fn all_shape_types() -> Vec<ShapeType> {
     vec![Z, L, O, S, I, J, T]
 }
 
+#[derive(Clone)]
 pub struct Shape {
     pub shape_type: ShapeType,
     pub grids: [ShapeGrid; 4],

@@ -165,7 +165,7 @@ impl Matrix {
                     position[1] + ((y - 1) * BLOCK_SIZE) as f32,
                 );
 
-                blocks.add(block, dest);
+                blocks.add(block, dest, 0.5);
             }
         }
 

@@ -166,16 +166,23 @@ impl Game {
         Ok(())
     }
 
-    pub fn draw(&mut self, ctx: &mut Context) -> GameResult<()> {
+    pub fn draw(&mut self, ctx: &mut Context, imgui: &ImGuiWrapper) -> GameResult<()> {
         graphics::draw(ctx, &self.background, graphics::DrawParam::new())?;
 
         self.particle_animation.draw(ctx)?;
 
-        self.matrix
-            .draw(ctx, Point2::new(200.0, 200.0), &mut self.blocks)?;
+        let position = Point2::new(400.0, 200.0);
 
-        self.piece
-            .draw(ctx, Point2::new(200.0, 200.0), &mut self.blocks)?;
+        self.matrix.draw(ctx, position, &mut self.blocks)?;
+
+        self.piece.draw(ctx, position, &mut self.blocks, 1.0)?;
+
+        if imgui.state.ghost_piece {
+            let mut ghost = self.piece.clone();
+            if ghost.fall(&self.matrix) > ghost.get_grid().height {
+                ghost.draw(ctx, position, &mut self.blocks, 0.1)?;
+            }
+        }
 
         Ok(())
     }

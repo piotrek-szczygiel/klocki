@@ -1,5 +1,5 @@
 use ggez::{
-    graphics::{self, spritebatch::SpriteBatch, DrawParam, Image, Rect},
+    graphics::{self, spritebatch::SpriteBatch, Color, DrawParam, Image, Rect},
     nalgebra::Point2,
     Context, GameResult,
 };
@@ -25,6 +25,8 @@ impl Blocks {
             std::process::exit(1);
         }
 
+        let batch = SpriteBatch::new(tileset);
+
         let mut rects: Vec<Rect> = Vec::with_capacity(BLOCKS_NUM);
 
         for i in 0..BLOCKS_NUM {
@@ -36,21 +38,22 @@ impl Blocks {
             ));
         }
 
-        Blocks {
-            batch: SpriteBatch::new(tileset),
-            rects,
-        }
+        Blocks { batch, rects }
     }
 
     pub fn clear(&mut self) {
         self.batch.clear();
     }
 
-    pub fn add(&mut self, block_id: usize, dest: Point2<f32>) {
+    pub fn add(&mut self, block_id: usize, dest: Point2<f32>, alpha: f32) {
         match block_id {
             1..=BLOCKS_NUM => {
-                self.batch
-                    .add(DrawParam::new().src(self.rects[block_id - 1]).dest(dest));
+                self.batch.add(
+                    DrawParam::new()
+                        .src(self.rects[block_id - 1])
+                        .dest(dest)
+                        .color(Color::new(1.0, 1.0, 1.0, alpha)),
+                );
             }
             0 => (),
             _ => log::error!("Attempt to draw a non-existing block: {}", block_id),

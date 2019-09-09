@@ -121,7 +121,7 @@ impl EventHandler for Application {
 
     fn draw(&mut self, ctx: &mut Context) -> GameResult<()> {
         graphics::clear(ctx, graphics::WHITE);
-        self.game.draw(ctx)?;
+        self.game.draw(ctx, &self.imgui_wrapper)?;
         self.imgui_wrapper.draw(ctx);
         graphics::present(ctx)?;
         Ok(())
