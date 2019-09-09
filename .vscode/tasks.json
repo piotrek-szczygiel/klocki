@@ -18,15 +18,15 @@
         {
             "label": "run",
             "type": "shell",
-            "command": "cargo run --release",
+            "command": "cargo run",
             "problemMatcher": [
                 "$rustc"
             ]
         },
         {
-            "label": "check",
+            "label": "run release",
             "type": "shell",
-            "command": "cargo check",
+            "command": "cargo run --release",
             "problemMatcher": [
                 "$rustc"
             ]
