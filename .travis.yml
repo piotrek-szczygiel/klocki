@@ -1,5 +1,8 @@
 sudo: true
 language: rust
+script:
+  - cargo build --release --verbose --all
+  - cargo test --release --verbose --all
 rust:
   - stable
   - beta
@@ -7,9 +10,12 @@ rust:
 os:
   - linux
   - osx
+  - windows
 matrix:
   allow_failures:
     - rust: nightly
+    - os: windows
+  fast_finish: true
 addons:
   apt:
     packages:
@@ -21,4 +27,3 @@ before_install:
       sudo apt-get -qq update
       && sudo apt-get install -y libasound2-dev libudev-dev;
     fi
-
