@@ -37,9 +37,6 @@ pub struct Game {
     particle_animation: ParticleAnimation,
     background: Image,
     theme: audio::Source,
-
-    hold_text: Text,
-    next_text: Text,
 }
 
 impl Game {
@@ -76,20 +73,6 @@ impl Game {
         theme.set_volume(0.2);
         theme.play()?;
 
-        let hold_text = Text::new(TextFragment {
-            text: "hold".to_string(),
-            color: Some(Color::new(0.8, 0.9, 1.0, 0.8)),
-            font: Some(font),
-            scale: Some(Scale::uniform(32.0)),
-        });
-
-        let next_text = Text::new(TextFragment {
-            text: "next".to_string(),
-            color: Some(Color::new(0.8, 0.9, 1.0, 0.8)),
-            font: Some(font),
-            scale: Some(Scale::uniform(32.0)),
-        });
-
         Ok(Game {
             input,
             matrix,
@@ -104,8 +87,6 @@ impl Game {
             particle_animation,
             background,
             theme,
-            hold_text,
-            next_text,
         })
     }
 
@@ -231,29 +212,52 @@ impl Game {
 
         let ui_block_size = ((block_size * 3) as f32 / 4.0) as i32;
 
+        let hold_text = Text::new(TextFragment {
+            text: "hold".to_string(),
+            color: Some(Color::new(0.8, 0.9, 1.0, 0.8)),
+            font: Some(self.font),
+            scale: Some(Scale::uniform(block_size as f32)),
+        });
+
         graphics::draw(
             ctx,
-            &self.hold_text,
-            DrawParam::new().dest(position - Vector2::new(110.0, 0.0)),
+            &hold_text,
+            DrawParam::new().dest(position - Vector2::new(ui_block_size as f32 * 4.5, 0.0)),
         )?;
 
         self.holder.draw(
             ctx,
-            position + Vector2::new(-3.25 * ui_block_size as f32, 60.0),
+            position + Vector2::new(-3.25 * ui_block_size as f32, ui_block_size as f32 * 2.0),
             &mut self.blocks,
             ui_block_size,
         )?;
 
+        let next_text = Text::new(TextFragment {
+            text: "next".to_string(),
+            color: Some(Color::new(0.8, 0.9, 1.0, 0.8)),
+            font: Some(self.font),
+            scale: Some(Scale::uniform(block_size as f32)),
+        });
+
         graphics::draw(
             ctx,
-            &self.next_text,
-            DrawParam::new()
-                .dest(position + Vector2::new(((matrix::WIDTH) * block_size) as f32 + 50.0, 0.0)),
+            &next_text,
+            DrawParam::new().dest(
+                position
+                    + Vector2::new(
+                        ((matrix::WIDTH) * block_size) as f32 + ui_block_size as f32 * 2.1,
+                        0.0,
+                    ),
+            ),
         )?;
 
         self.bag.draw(
             ctx,
-            position + Vector2::new(((matrix::WIDTH + 1) * block_size) as f32, 60.0),
+            position
+                + Vector2::new(
+                    ((matrix::WIDTH + 1) * block_size) as f32,
+                    ui_block_size as f32 * 2.0,
+                ),
             &mut self.blocks,
             ui_block_size,
         )?;
