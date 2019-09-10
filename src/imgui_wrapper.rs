@@ -1,18 +1,13 @@
-use std::{path, time::Instant};
+use std::time::Instant;
 
 use gfx_core::{handle::RenderTargetView, memory::Typed};
 use gfx_device_gl;
-use ggez::{
-    conf::WindowMode,
-    event, filesystem,
-    graphics::{self, Image},
-    timer, Context, GameResult,
-};
+use ggez::{event, graphics, timer, Context};
 
-use imgui::{self, im_str, ImStr, ImString, StyleColor};
+use imgui::{self, im_str, ImString, StyleColor};
 use imgui_gfx_renderer::{Renderer, Shaders};
 
-use crate::utils;
+use crate::settings::{self, Settings};
 
 #[derive(Copy, Clone, PartialEq, Debug, Default)]
 struct MouseState {
@@ -26,13 +21,6 @@ pub struct State {
     pub restart: bool,
     pub paused: bool,
     pub debug_t_spin_tower: bool,
-    pub current_skin_id: usize,
-    pub skin_switched: bool,
-    pub toggle_fullscreen: bool,
-    pub current_scale: f32,
-    pub ghost_piece: bool,
-    pub block_size: i32,
-    pub background: bool,
 }
 
 pub struct ImGuiWrapper {
@@ -42,8 +30,6 @@ pub struct ImGuiWrapper {
     last_frame: Instant,
     mouse_state: MouseState,
     show_debug_window: bool,
-    skins: Vec<path::PathBuf>,
-    skins_im: Vec<ImString>,
 }
 
 impl ImGuiWrapper {
@@ -70,30 +56,6 @@ impl ImGuiWrapper {
 
         let renderer = Renderer::init(&mut imgui, &mut *factory, shaders).unwrap();
 
-        let mut skins: Vec<path::PathBuf> = vec![];
-        {
-            let skins_dir: Vec<_> = filesystem::read_dir(ctx, utils::path(ctx, "blocks"))
-                .unwrap()
-                .collect();
-
-            for skin in skins_dir {
-                if skin.extension().is_none() {
-                    continue;
-                }
-
-                if skin.extension().unwrap() != "png" {
-                    continue;
-                }
-
-                skins.push(skin.clone());
-            }
-        }
-
-        let skins_im = skins
-            .iter()
-            .map(|s| ImString::from(String::from(s.file_name().unwrap().to_str().unwrap())))
-            .collect();
-
         ImGuiWrapper {
             imgui,
             renderer,
@@ -101,23 +63,19 @@ impl ImGuiWrapper {
                 restart: false,
                 paused: false,
                 debug_t_spin_tower: false,
-                skin_switched: false,
-                current_skin_id: 0,
-                toggle_fullscreen: false,
-                current_scale: graphics::size(ctx).0 / 1920.0,
-                ghost_piece: true,
-                block_size: 32,
-                background: true,
             },
             last_frame: Instant::now(),
             mouse_state: MouseState::default(),
             show_debug_window: false,
-            skins,
-            skins_im,
         }
     }
 
-    pub fn draw(&mut self, ctx: &mut Context) {
+    pub fn draw(
+        &mut self,
+        ctx: &mut Context,
+        settings: &mut Settings,
+        settings_state: &mut settings::State,
+    ) {
         self.update_mouse();
 
         let now = Instant::now();
@@ -133,16 +91,10 @@ impl ImGuiWrapper {
 
         let ui = self.imgui.frame();
         {
-            // let skins_im_len = self.skins_im.len() as i32;
-            let skins_im: Vec<&ImStr> = self.skins_im.iter().map(|s| s.as_ref()).collect();
-
             let mut state = State {
                 restart: false,
                 debug_t_spin_tower: false,
-                skin_switched: false,
-                toggle_fullscreen: false,
-
-                ..self.state
+                paused: self.state.paused,
             };
 
             if self.show_debug_window {
@@ -165,66 +117,16 @@ impl ImGuiWrapper {
                     });
             }
 
-            ui.main_menu_bar(|| {
-                ui.menu(im_str!("File"), true, || {
+            if let Some(menu_bar) = ui.begin_main_menu_bar() {
+                if let Some(menu) = ui.begin_menu(im_str!("File"), true) {
                     if imgui::MenuItem::new(im_str!("Quit")).build(&ui) {
                         event::quit(ctx);
                     }
-                });
 
-                ui.menu(im_str!("Settings"), true, || {
-                    ui.text(im_str!("Fullscreen"));
-                    if ui.button(im_str!("Toggle fullscreen"), [212.0, 20.0]) {
-                        state.toggle_fullscreen = true;
-                    }
+                    menu.end(&ui);
+                }
 
-                    ui.separator();
-                    ui.text(im_str!("Window scale"));
-                    let id = ui.push_id(0);
-                    if imgui::Slider::new(im_str!(""), 0.25..=2.0)
-                        .build(&ui, &mut state.current_scale)
-                    {
-                        graphics::set_mode(
-                            ctx,
-                            WindowMode::default().dimensions(
-                                1920.0 * state.current_scale,
-                                1080.0 * state.current_scale,
-                            ),
-                        )
-                        .unwrap_or_else(|e| log::error!("Unable to change resolution: {:?}", e));
-                    }
-                    id.pop(&ui);
-
-                    ui.separator();
-                    ui.text(im_str!("Blocks skin"));
-                    let id = ui.push_id(1);
-                    if imgui::ComboBox::new(im_str!("")).build_simple_string(
-                        &ui,
-                        &mut state.current_skin_id,
-                        &skins_im,
-                    ) {
-                        state.skin_switched = true;
-                    }
-                    id.pop(&ui);
-
-                    ui.separator();
-                    ui.text(im_str!("Block size"));
-                    let id = ui.push_id(2);
-                    imgui::Slider::new(im_str!(""), 16..=44).build(&ui, &mut state.block_size);
-                    id.pop(&ui);
-
-                    ui.separator();
-                    ui.text(im_str!("Ghost piece"));
-                    let id = ui.push_id(3);
-                    ui.checkbox(im_str!("Enabled"), &mut state.ghost_piece);
-                    id.pop(&ui);
-
-                    ui.separator();
-                    ui.text(im_str!("Animated background"));
-                    let id = ui.push_id(4);
-                    ui.checkbox(im_str!("Enabled"), &mut state.background);
-                    id.pop(&ui);
-                });
+                settings.draw(settings_state, &ui);
 
                 ui.separator();
                 ui.text(im_str!("FPS:"));
@@ -239,7 +141,9 @@ impl ImGuiWrapper {
                 let token = ui.push_style_color(StyleColor::Text, color);
                 ui.text(ImString::from(fps.to_string()));
                 token.pop(&ui);
-            });
+
+                menu_bar.end(&ui);
+            }
 
             self.state = state;
         }
@@ -280,17 +184,11 @@ impl ImGuiWrapper {
         self.mouse_state.pressed = pressed;
     }
 
-    pub fn toggle_window(&mut self) {
-        self.show_debug_window = !self.show_debug_window;
+    pub fn update_mouse_scroll(&mut self, lines: f32) {
+        self.mouse_state.wheel = lines;
     }
 
-    pub fn tileset(&self, ctx: &mut Context) -> GameResult<Image> {
-        Image::new(
-            ctx,
-            utils::path(
-                ctx,
-                self.skins[self.state.current_skin_id].to_str().unwrap(),
-            ),
-        )
+    pub fn toggle_window(&mut self) {
+        self.show_debug_window = !self.show_debug_window;
     }
 }

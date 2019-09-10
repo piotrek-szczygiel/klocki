@@ -9,6 +9,7 @@ mod input;
 mod matrix;
 mod particles;
 mod piece;
+mod settings;
 mod shape;
 mod utils;
 
@@ -18,7 +19,7 @@ use env_logger;
 use log::{self, LevelFilter};
 
 use ggez::{
-    conf,
+    conf::{self, WindowMode},
     event::{self, EventHandler, KeyMods, MouseButton},
     graphics,
     input::keyboard::KeyCode,
@@ -70,11 +71,14 @@ fn real_main() -> GameResult {
     let (ctx, event_loop) = &mut cb.build()?;
 
     graphics::set_screen_coordinates(ctx, graphics::Rect::new(0.0, 0.0, 1920.0, 1080.0))?;
+    graphics::set_window_icon(ctx, Some(utils::path(ctx, "icon.png")))?;
 
-    let game = &mut Application::new(ctx)?;
+    let app = &mut Application::new(ctx)?;
 
     log::info!("Starting the event loop");
-    event::run(ctx, event_loop, game)?;
+    event::run(ctx, event_loop, app)?;
+    log::info!("Saving the settings");
+    app.game.settings.save("config.toml")?;
     log::info!("Exiting the application");
 
     Ok(())
@@ -84,35 +88,46 @@ struct Application {
     game: game::Game,
     imgui_wrapper: imgui_wrapper::ImGuiWrapper,
     is_fullscreen: bool,
+    window_scale: f32,
 }
 
 impl Application {
     fn new(ctx: &mut Context) -> GameResult<Application> {
-        let imgui = ImGuiWrapper::new(ctx);
-
         Ok(Application {
-            game: game::Game::new(ctx, &imgui)?,
-            imgui_wrapper: imgui,
+            game: game::Game::new(ctx)?,
+            imgui_wrapper: ImGuiWrapper::new(ctx),
             is_fullscreen: false,
+            window_scale: 1280.0 / 1920.0,
         })
     }
 }
 
 impl EventHandler for Application {
     fn update(&mut self, ctx: &mut Context) -> GameResult<()> {
-        if self.imgui_wrapper.state.toggle_fullscreen {
-            self.imgui_wrapper.state.toggle_fullscreen = false;
-            self.is_fullscreen = !self.is_fullscreen;
+        if self.game.settings.fullscreen != self.is_fullscreen {
+            self.is_fullscreen = self.game.settings.fullscreen;
             let fullscreen_type = if self.is_fullscreen {
                 conf::FullscreenType::True
             } else {
                 conf::FullscreenType::Windowed
             };
+            log::trace!("Changing to fullscreen: {:?}", fullscreen_type);
             graphics::set_fullscreen(ctx, fullscreen_type)?;
         }
 
+        if (self.window_scale - self.game.settings.window_scale).abs() > 0.01 {
+            self.window_scale = self.game.settings.window_scale;
+            log::trace!("Settings window size: {}", self.window_scale);
+            graphics::set_mode(
+                ctx,
+                WindowMode::default()
+                    .dimensions(1920.0 * self.window_scale, 1080.0 * self.window_scale),
+            )
+            .unwrap_or_else(|e| log::error!("Unable to change resolution: {:?}", e));
+        }
+
         if self.imgui_wrapper.state.restart {
-            self.game = Game::new(ctx, &self.imgui_wrapper)?;
+            self.game = Game::new(ctx)?;
         }
 
         self.game.update(ctx, &self.imgui_wrapper)?;
@@ -122,8 +137,9 @@ impl EventHandler for Application {
 
     fn draw(&mut self, ctx: &mut Context) -> GameResult<()> {
         graphics::clear(ctx, graphics::WHITE);
-        self.game.draw(ctx, &self.imgui_wrapper)?;
-        self.imgui_wrapper.draw(ctx);
+        self.game.draw(ctx)?;
+        self.imgui_wrapper
+            .draw(ctx, &mut self.game.settings, &mut self.game.settings_state);
         graphics::present(ctx)?;
         Ok(())
     }
@@ -131,7 +147,7 @@ impl EventHandler for Application {
     fn key_up_event(&mut self, ctx: &mut Context, keycode: KeyCode, _keymods: KeyMods) {
         match keycode {
             KeyCode::F11 => {
-                self.imgui_wrapper.state.toggle_fullscreen = true;
+                self.game.settings.fullscreen = !self.game.settings.fullscreen;
             }
             KeyCode::D => self.imgui_wrapper.toggle_window(),
             KeyCode::Escape => event::quit(ctx),
@@ -141,6 +157,10 @@ impl EventHandler for Application {
 
     fn mouse_motion_event(&mut self, _ctx: &mut Context, x: f32, y: f32, _dx: f32, _dy: f32) {
         self.imgui_wrapper.update_mouse_pos(x, y);
+    }
+
+    fn mouse_wheel_event(&mut self, _ctx: &mut Context, _x: f32, y: f32) {
+        self.imgui_wrapper.update_mouse_scroll(y);
     }
 
     fn mouse_button_down_event(
