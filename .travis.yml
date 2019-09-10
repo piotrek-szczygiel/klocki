@@ -20,7 +20,7 @@ addons:
   apt:
     packages:
       - libssl-dev
-cache: cargo
+#cache: cargo
 
 before_install:
   - if [[ "${TRAVIS_OS_NAME}" == "linux" ]]; then
