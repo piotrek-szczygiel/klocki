@@ -133,7 +133,7 @@ impl ImGuiWrapper {
 
         let ui = self.imgui.frame();
         {
-            let skins_im_len = self.skins_im.len() as i32;
+            // let skins_im_len = self.skins_im.len() as i32;
             let skins_im: Vec<&ImStr> = self.skins_im.iter().map(|s| s.as_ref()).collect();
 
             let mut state = State {
@@ -146,10 +146,10 @@ impl ImGuiWrapper {
             };
 
             if self.show_debug_window {
-                ui.window(im_str!("Debug"))
+                imgui::Window::new(im_str!("Debug"))
                     .size([300.0, 600.0], imgui::Condition::FirstUseEver)
                     .position([100.0, 100.0], imgui::Condition::FirstUseEver)
-                    .build(|| {
+                    .build(&ui, || {
                         ui.text(im_str!("Debugging"));
                         ui.separator();
 
@@ -166,13 +166,13 @@ impl ImGuiWrapper {
             }
 
             ui.main_menu_bar(|| {
-                ui.menu(im_str!("File")).build(|| {
-                    if ui.menu_item(im_str!("Quit")).build() {
+                ui.menu(im_str!("File"), true, || {
+                    if imgui::MenuItem::new(im_str!("Quit")).build(&ui) {
                         event::quit(ctx);
                     }
                 });
 
-                ui.menu(im_str!("Settings")).build(|| {
+                ui.menu(im_str!("Settings"), true, || {
                     ui.text(im_str!("Fullscreen"));
                     if ui.button(im_str!("Toggle fullscreen"), [212.0, 20.0]) {
                         state.toggle_fullscreen = true;
@@ -180,10 +180,9 @@ impl ImGuiWrapper {
 
                     ui.separator();
                     ui.text(im_str!("Window scale"));
-                    ui.push_id(0);
-                    if ui
-                        .slider_float(im_str!(""), &mut state.current_scale, 0.25, 2.0)
-                        .build()
+                    let id = ui.push_id(0);
+                    if imgui::Slider::new(im_str!(""), 0.25..=2.0)
+                        .build(&ui, &mut state.current_scale)
                     {
                         graphics::set_mode(
                             ctx,
@@ -194,36 +193,37 @@ impl ImGuiWrapper {
                         )
                         .unwrap_or_else(|e| log::error!("Unable to change resolution: {:?}", e));
                     }
-                    ui.pop_id();
+                    id.pop(&ui);
 
                     ui.separator();
                     ui.text(im_str!("Blocks skin"));
-                    let mut current_skin_id = state.current_skin_id as i32;
-                    ui.push_id(1);
-                    if ui.combo(im_str!(""), &mut current_skin_id, &skins_im, skins_im_len) {
-                        state.current_skin_id = current_skin_id as usize;
+                    let id = ui.push_id(1);
+                    if imgui::ComboBox::new(im_str!("")).build_simple_string(
+                        &ui,
+                        &mut state.current_skin_id,
+                        &skins_im,
+                    ) {
                         state.skin_switched = true;
                     }
-                    ui.pop_id();
+                    id.pop(&ui);
 
                     ui.separator();
                     ui.text(im_str!("Block size"));
-                    ui.push_id(2);
-                    ui.slider_int(im_str!(""), &mut state.block_size, 16, 44)
-                        .build();
-                    ui.pop_id();
+                    let id = ui.push_id(2);
+                    imgui::Slider::new(im_str!(""), 16..=44).build(&ui, &mut state.block_size);
+                    id.pop(&ui);
 
                     ui.separator();
                     ui.text(im_str!("Ghost piece"));
-                    ui.push_id(3);
+                    let id = ui.push_id(3);
                     ui.checkbox(im_str!("Enabled"), &mut state.ghost_piece);
-                    ui.pop_id();
+                    id.pop(&ui);
 
                     ui.separator();
                     ui.text(im_str!("Animated background"));
-                    ui.push_id(4);
+                    let id = ui.push_id(4);
                     ui.checkbox(im_str!("Enabled"), &mut state.background);
-                    ui.pop_id();
+                    id.pop(&ui);
                 });
 
                 ui.separator();
@@ -236,8 +236,9 @@ impl ImGuiWrapper {
                     [1.0, 0.0, 0.0, 1.0]
                 };
 
-                let _token = ui.push_style_color(StyleColor::Text, color);
+                let token = ui.push_style_color(StyleColor::Text, color);
                 ui.text(ImString::from(fps.to_string()));
+                token.pop(&ui);
             });
 
             self.state = state;
