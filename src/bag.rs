@@ -46,8 +46,13 @@ impl Bag {
         block_size: i32,
     ) -> GameResult {
         for (i, &shape) in self.peek(6).enumerate() {
-            let position = position + Vector2::new(0.0, (i as i32 * block_size * 4) as f32);
-            Shape::new(shape).draw(ctx, 0, position, blocks, block_size, 0.9)?;
+            let shape = Shape::new(shape);
+            let position = position
+                + Vector2::new(
+                    block_size as f32 * 2.0 - shape.grids[0].width as f32 * block_size as f32 / 2.0,
+                    (i as i32 * block_size * 3) as f32,
+                );
+            shape.draw(ctx, 0, position, blocks, block_size, 0.9)?;
         }
 
         Ok(())

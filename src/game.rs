@@ -14,7 +14,7 @@ use crate::{
 
 use ggez::{
     audio::{self, SoundSource},
-    graphics::{self, Image},
+    graphics::{self, Color, DrawParam, Font, Image, Scale, Text, TextFragment},
     input::keyboard::KeyCode,
     nalgebra::{Point2, Vector2},
     timer, Context, GameResult,
@@ -24,18 +24,22 @@ pub struct Game {
     input: Input,
 
     matrix: Matrix,
-    piece: Piece,
     bag: Bag,
+    piece: Piece,
     holder: Holder,
 
     game_over: bool,
     still: Duration,
     fall_interval: Duration,
 
+    font: Font,
     blocks: Blocks,
     particle_animation: ParticleAnimation,
     background: Image,
     theme: audio::Source,
+
+    hold_text: Text,
+    next_text: Text,
 }
 
 impl Game {
@@ -57,8 +61,9 @@ impl Game {
 
         let matrix = Matrix::new();
         let mut bag = Bag::new();
+        let piece = Piece::new(bag.pop());
         let holder = Holder::new();
-
+        let font = Font::new(ctx, utils::path(ctx, "font.ttf"))?;
         let blocks = Blocks::new(imgui.tileset(ctx)?);
 
         let rect = graphics::screen_coordinates(ctx);
@@ -71,21 +76,36 @@ impl Game {
         theme.set_volume(0.2);
         theme.play()?;
 
-        let piece = Piece::new(bag.pop());
+        let hold_text = Text::new(TextFragment {
+            text: "hold".to_string(),
+            color: Some(Color::new(0.8, 0.9, 1.0, 0.8)),
+            font: Some(font),
+            scale: Some(Scale::uniform(32.0)),
+        });
+
+        let next_text = Text::new(TextFragment {
+            text: "next".to_string(),
+            color: Some(Color::new(0.8, 0.9, 1.0, 0.8)),
+            font: Some(font),
+            scale: Some(Scale::uniform(32.0)),
+        });
 
         Ok(Game {
             input,
             matrix,
-            piece,
             bag,
+            piece,
             holder,
             game_over: false,
             still: Duration::new(0, 0),
             fall_interval: Duration::from_secs(1),
+            font,
             blocks,
             particle_animation,
             background,
             theme,
+            hold_text,
+            next_text,
         })
     }
 
@@ -125,7 +145,7 @@ impl Game {
         }
 
         self.matrix.update(ctx);
-        if self.game_over || self.matrix.blocked() {
+        if self.game_over || self.matrix.blocked() || imgui.state.paused {
             return Ok(());
         }
 
@@ -209,18 +229,31 @@ impl Game {
             (1080 - matrix::HEIGHT * block_size) as f32 / 2.0,
         );
 
-        let ui_block_size = block_size * 3 / 4;
+        let ui_block_size = ((block_size * 3) as f32 / 4.0) as i32;
+
+        graphics::draw(
+            ctx,
+            &self.hold_text,
+            DrawParam::new().dest(position - Vector2::new(110.0, 0.0)),
+        )?;
 
         self.holder.draw(
             ctx,
-            position - Vector2::new(ui_block_size as f32 * 5.0, 0.0),
+            position + Vector2::new(-3.25 * ui_block_size as f32, 60.0),
             &mut self.blocks,
             ui_block_size,
         )?;
 
+        graphics::draw(
+            ctx,
+            &self.next_text,
+            DrawParam::new()
+                .dest(position + Vector2::new(((matrix::WIDTH) * block_size) as f32 + 50.0, 0.0)),
+        )?;
+
         self.bag.draw(
             ctx,
-            position + Vector2::new(((matrix::WIDTH + 1) * block_size) as f32, 0.0),
+            position + Vector2::new(((matrix::WIDTH + 1) * block_size) as f32, 60.0),
             &mut self.blocks,
             ui_block_size,
         )?;

@@ -4,7 +4,10 @@ use crate::{
     shape::{Shape, ShapeType},
 };
 
-use ggez::{nalgebra::Point2, Context, GameResult};
+use ggez::{
+    nalgebra::{Point2, Vector2},
+    Context, GameResult,
+};
 
 pub struct Holder {
     shape: Option<Shape>,
@@ -29,7 +32,10 @@ impl Holder {
         let mut swap = Some(Shape::new(shape_type));
         std::mem::swap(&mut self.shape, &mut swap);
 
-        swap.map_or(Some(bag.pop()), |s| Some(s.shape_type))
+        match swap {
+            None => Some(bag.pop()),
+            Some(s) => Some(s.shape_type),
+        }
     }
 
     pub fn unlock(&mut self) {
@@ -44,6 +50,8 @@ impl Holder {
         block_size: i32,
     ) -> GameResult {
         if let Some(shape) = &self.shape {
+            let position = position
+                + Vector2::new(-shape.grids[0].width as f32 * block_size as f32 / 2.0, 0.0);
             shape.draw(ctx, 0, position, blocks, block_size, 1.0)?;
         }
 

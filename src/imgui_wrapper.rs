@@ -24,6 +24,7 @@ struct MouseState {
 #[derive(Copy, Clone)]
 pub struct State {
     pub restart: bool,
+    pub paused: bool,
     pub debug_t_spin_tower: bool,
     pub current_skin_id: usize,
     pub skin_switched: bool,
@@ -98,6 +99,7 @@ impl ImGuiWrapper {
             renderer,
             state: State {
                 restart: false,
+                paused: false,
                 debug_t_spin_tower: false,
                 skin_switched: false,
                 current_skin_id: 0,
@@ -154,6 +156,8 @@ impl ImGuiWrapper {
                         if ui.small_button(im_str!("Restart")) {
                             state.restart = true;
                         }
+
+                        ui.checkbox(im_str!("Paused"), &mut state.paused);
 
                         if ui.small_button(im_str!("T-Spin tower")) {
                             state.debug_t_spin_tower = true;
