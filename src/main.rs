@@ -49,7 +49,11 @@ fn real_main() -> GameResult {
                 .samples(conf::NumSamples::Four)
                 .vsync(false),
         )
-        .window_mode(conf::WindowMode::default().dimensions(1280.0, 720.0));
+        .window_mode(
+            conf::WindowMode::default()
+                .dimensions(1280.0, 720.0)
+                .resizable(true),
+        );
 
     // Read from resources directory on debug mode
     #[cfg(build = "debug")]
@@ -117,11 +121,11 @@ impl EventHandler for Application {
 
         if (self.window_scale - self.game.settings.window_scale).abs() > 0.01 {
             self.window_scale = self.game.settings.window_scale;
-            log::trace!("Settings window size: {}", self.window_scale);
             graphics::set_mode(
                 ctx,
                 WindowMode::default()
-                    .dimensions(1920.0 * self.window_scale, 1080.0 * self.window_scale),
+                    .dimensions(1920.0 * self.window_scale, 1080.0 * self.window_scale)
+                    .resizable(true),
             )
             .unwrap_or_else(|e| log::error!("Unable to change resolution: {:?}", e));
         }
