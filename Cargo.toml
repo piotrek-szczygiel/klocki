@@ -27,4 +27,5 @@ imgui-gfx-renderer = "0.2"
 
 [build-dependencies]
 walkdir = "2.2"
+winres = "0.1"
 zip = "0.5"

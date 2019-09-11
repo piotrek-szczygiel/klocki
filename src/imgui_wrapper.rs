@@ -99,10 +99,10 @@ impl ImGuiWrapper {
 
             if self.show_debug_window {
                 imgui::Window::new(im_str!("Debug"))
-                    .size([300.0, 600.0], imgui::Condition::FirstUseEver)
-                    .position([100.0, 100.0], imgui::Condition::FirstUseEver)
+                    .size([200.0, 200.0], imgui::Condition::Appearing)
+                    .position([50.0, 50.0], imgui::Condition::Appearing)
                     .build(&ui, || {
-                        ui.text(im_str!("Debugging"));
+                        ui.text(im_str!("Debugging window"));
                         ui.separator();
 
                         if ui.small_button(im_str!("Restart")) {

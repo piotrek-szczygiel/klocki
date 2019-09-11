@@ -76,7 +76,7 @@ fn real_main() -> GameResult {
     let (ctx, event_loop) = &mut cb.build()?;
 
     graphics::set_screen_coordinates(ctx, graphics::Rect::new(0.0, 0.0, 1920.0, 1080.0))?;
-    graphics::set_window_icon(ctx, Some(utils::path(ctx, "icon.png")))?;
+    graphics::set_window_icon(ctx, Some(utils::path(ctx, "icon.ico")))?;
 
     let app = &mut Application::new(ctx, settings)?;
 

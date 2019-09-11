@@ -7,7 +7,8 @@ use std::{
 };
 
 use walkdir::{DirEntry, WalkDir};
-use zip::{result::ZipError, write::FileOptions};
+use winres::WindowsResource;
+use zip::{result::ZipError, write::FileOptions, CompressionMethod};
 
 fn main() {
     let profile = env::var("PROFILE").unwrap();
@@ -22,14 +23,22 @@ fn main() {
 
     let _ = fs::remove_file(Path::new(dst_file));
 
-    let method = zip::CompressionMethod::Deflated;
+    let method = CompressionMethod::Deflated;
 
     match compress(src_dir, dst_file, method) {
-        Ok(_) => println!("done: {} written to {}", src_dir, dst_file),
+        Ok(_) => println!("Done compressing {}, written to {}", src_dir, dst_file),
         Err(e) => {
-            println!("error: {:?}", e);
+            println!("Error while compressing resources: {:?}", e);
             std::process::exit(1);
         }
+    }
+
+    if cfg!(target_os = "windows") {
+        let _ = WindowsResource::new()
+            .set_icon("resources/icon.ico")
+            .compile()
+            .unwrap();
+        println!("Created an icon");
     }
 }
 
