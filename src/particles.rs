@@ -19,7 +19,17 @@ struct Particle {
 }
 
 impl Particle {
-    fn new(n: usize, max_x: f32, max_y: f32) -> Vec<Particle> {
+    pub fn new(position: Point2<f32>, speed: Vector2<f32>, size: f32, color: Color) -> Particle {
+        Particle {
+            position,
+            speed,
+            starting_speed: speed.abs(),
+            size,
+            color,
+        }
+    }
+
+    fn random_plane(n: usize, max_x: f32, max_y: f32) -> Vec<Particle> {
         let mut particles: Vec<Particle> = vec![];
         let mut rng = rand::thread_rng();
 
@@ -32,38 +42,29 @@ impl Particle {
         let normal_size = Normal::new(2.0, 0.5).unwrap();
         let uniform_color = Normal::new(0.5, 0.2).unwrap();
 
+        fn clamp(source: f32, min: f32, max: f32) -> f32 {
+            if source < min {
+                min
+            } else if source > max {
+                max
+            } else {
+                source
+            }
+        }
+
         for _ in 0..n {
             let speed = Vector2::new(uniform_vx.sample(&mut rng), uniform_vy.sample(&mut rng));
-            let starting_speed = speed.abs();
-
-            let mut size = normal_size.sample(&mut rng);
-
-            if size < 1.0 {
-                size = 1.0;
-            }
+            let size = clamp(normal_size.sample(&mut rng), 1.0, 5.0);
 
             let position = Point2::new(
                 uniform_x.sample(&mut rng) * max_x,
                 uniform_y.sample(&mut rng) * max_y,
             );
 
-            let mut color = uniform_color.sample(&mut rng);
+            let c = clamp(uniform_color.sample(&mut rng), 0.1, 1.0);
+            let color = Color::new(c, c, c, c);
 
-            if color < 0.1 {
-                color = 0.1;
-            } else if color > 1.0 {
-                color = 1.0;
-            }
-
-            let color = Color::new(color, color, color, 1.0);
-
-            particles.push(Particle {
-                position,
-                speed,
-                starting_speed,
-                size,
-                color,
-            })
+            particles.push(Particle::new(position, speed, size, color));
         }
 
         particles
@@ -72,7 +73,6 @@ impl Particle {
 
 pub struct ParticleAnimation {
     particles: Vec<Particle>,
-    max_particles: usize,
     threshold: f32,
     max_speed: f32,
     width: f32,
@@ -81,15 +81,14 @@ pub struct ParticleAnimation {
 
 impl ParticleAnimation {
     pub fn new(
-        max_particles: usize,
+        particles: usize,
         threshold: f32,
         max_speed: f32,
         width: f32,
         height: f32,
     ) -> ParticleAnimation {
         ParticleAnimation {
-            particles: Particle::new(max_particles, width, height),
-            max_particles,
+            particles: Particle::random_plane(particles, width, height),
             threshold,
             max_speed,
             width,

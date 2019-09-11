@@ -1,5 +1,3 @@
-#![allow(dead_code)]
-
 mod bag;
 mod blocks;
 mod game;
@@ -13,7 +11,9 @@ mod settings;
 mod shape;
 mod utils;
 
-use crate::{game::Game, imgui_wrapper::ImGuiWrapper};
+use std::time::Duration;
+
+use crate::{game::Game, imgui_wrapper::ImGuiWrapper, settings::Settings};
 
 use env_logger;
 use log::{self, LevelFilter};
@@ -23,7 +23,7 @@ use ggez::{
     event::{self, EventHandler, KeyMods, MouseButton},
     graphics,
     input::keyboard::KeyCode,
-    Context, ContextBuilder, GameResult,
+    timer, Context, ContextBuilder, GameResult,
 };
 
 fn main() {
@@ -39,14 +39,15 @@ fn main() {
 }
 
 fn real_main() -> GameResult {
-    log::debug!("Creating the context");
+    let settings = Settings::new();
 
+    log::debug!("Creating the context");
     let mut cb = ContextBuilder::new("tetris", "piotrek-szczygiel")
         .with_conf_file(false)
         .window_setup(
             conf::WindowSetup::default()
                 .title("Tetris")
-                .samples(conf::NumSamples::Four)
+                .samples(settings.multi_sampling)
                 .vsync(false),
         )
         .window_mode(
@@ -77,14 +78,15 @@ fn real_main() -> GameResult {
     graphics::set_screen_coordinates(ctx, graphics::Rect::new(0.0, 0.0, 1920.0, 1080.0))?;
     graphics::set_window_icon(ctx, Some(utils::path(ctx, "icon.png")))?;
 
-    let app = &mut Application::new(ctx)?;
+    let app = &mut Application::new(ctx, settings)?;
 
     log::info!("Starting the event loop");
     event::run(ctx, event_loop, app)?;
-    log::info!("Saving the settings");
-    app.game.settings.save("config.toml")?;
-    log::info!("Exiting the application");
 
+    log::info!("Saving the settings");
+    app.game.settings.save()?;
+
+    log::info!("Exiting the application");
     Ok(())
 }
 
@@ -92,15 +94,17 @@ struct Application {
     game: game::Game,
     imgui_wrapper: imgui_wrapper::ImGuiWrapper,
     is_fullscreen: bool,
+    fullscreen_delay: Duration,
     window_scale: f32,
 }
 
 impl Application {
-    fn new(ctx: &mut Context) -> GameResult<Application> {
+    fn new(ctx: &mut Context, settings: Settings) -> GameResult<Application> {
         Ok(Application {
-            game: game::Game::new(ctx)?,
+            game: game::Game::new(ctx, settings)?,
             imgui_wrapper: ImGuiWrapper::new(ctx),
             is_fullscreen: false,
+            fullscreen_delay: Duration::new(0, 0),
             window_scale: 1280.0 / 1920.0,
         })
     }
@@ -108,15 +112,20 @@ impl Application {
 
 impl EventHandler for Application {
     fn update(&mut self, ctx: &mut Context) -> GameResult<()> {
-        if self.game.settings.fullscreen != self.is_fullscreen {
+        if self.game.settings.fullscreen != self.is_fullscreen
+            && self.fullscreen_delay > Duration::from_millis(500)
+        {
             self.is_fullscreen = self.game.settings.fullscreen;
+            self.fullscreen_delay = Duration::new(0, 0);
+
             let fullscreen_type = if self.is_fullscreen {
-                conf::FullscreenType::True
+                Some(graphics::window(ctx).get_current_monitor())
             } else {
-                conf::FullscreenType::Windowed
+                None
             };
-            log::trace!("Changing to fullscreen: {:?}", fullscreen_type);
-            graphics::set_fullscreen(ctx, fullscreen_type)?;
+            graphics::window(ctx).set_fullscreen(fullscreen_type);
+        } else {
+            self.fullscreen_delay += timer::delta(ctx);
         }
 
         if (self.window_scale - self.game.settings.window_scale).abs() > 0.01 {
@@ -131,7 +140,11 @@ impl EventHandler for Application {
         }
 
         if self.imgui_wrapper.state.restart {
-            self.game = Game::new(ctx)?;
+            self.game = Game::new(ctx, Settings::new())?;
+        }
+
+        if self.game.settings_state.quit {
+            event::quit(ctx);
         }
 
         self.game.update(ctx, &self.imgui_wrapper)?;
@@ -146,25 +159,6 @@ impl EventHandler for Application {
             .draw(ctx, &mut self.game.settings, &mut self.game.settings_state);
         graphics::present(ctx)?;
         Ok(())
-    }
-
-    fn key_up_event(&mut self, ctx: &mut Context, keycode: KeyCode, _keymods: KeyMods) {
-        match keycode {
-            KeyCode::F11 => {
-                self.game.settings.fullscreen = !self.game.settings.fullscreen;
-            }
-            KeyCode::D => self.imgui_wrapper.toggle_window(),
-            KeyCode::Escape => event::quit(ctx),
-            _ => (),
-        }
-    }
-
-    fn mouse_motion_event(&mut self, _ctx: &mut Context, x: f32, y: f32, _dx: f32, _dy: f32) {
-        self.imgui_wrapper.update_mouse_pos(x, y);
-    }
-
-    fn mouse_wheel_event(&mut self, _ctx: &mut Context, _x: f32, y: f32) {
-        self.imgui_wrapper.update_mouse_scroll(y);
     }
 
     fn mouse_button_down_event(
@@ -189,5 +183,24 @@ impl EventHandler for Application {
         _y: f32,
     ) {
         self.imgui_wrapper.update_mouse_down((false, false, false));
+    }
+
+    fn mouse_motion_event(&mut self, _ctx: &mut Context, x: f32, y: f32, _dx: f32, _dy: f32) {
+        self.imgui_wrapper.update_mouse_pos(x, y);
+    }
+
+    fn mouse_wheel_event(&mut self, _ctx: &mut Context, _x: f32, y: f32) {
+        self.imgui_wrapper.update_mouse_scroll(y);
+    }
+
+    fn key_up_event(&mut self, ctx: &mut Context, keycode: KeyCode, _keymods: KeyMods) {
+        match keycode {
+            KeyCode::F11 => {
+                self.game.settings.fullscreen = !self.game.settings.fullscreen;
+            }
+            KeyCode::D => self.imgui_wrapper.toggle_window(),
+            KeyCode::Escape => event::quit(ctx),
+            _ => (),
+        }
     }
 }

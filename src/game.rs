@@ -39,14 +39,14 @@ pub struct Game {
     blocks: Blocks,
     particle_animation: ParticleAnimation,
     background: Image,
-    theme: audio::Source,
+    music: audio::Source,
 
     pub settings: Settings,
     pub settings_state: settings::State,
 }
 
 impl Game {
-    pub fn new(ctx: &mut Context) -> GameResult<Game> {
+    pub fn new(ctx: &mut Context, settings: Settings) -> GameResult<Game> {
         let repeat = Some((150, 50));
         let mut input = Input::new();
         input
@@ -69,14 +69,14 @@ impl Game {
         let font = Font::new(ctx, utils::path(ctx, "font.ttf"))?;
 
         let rect = graphics::screen_coordinates(ctx);
-        let particle_animation = ParticleAnimation::new(120, 200.0, 80.0, rect.w, rect.h);
+        let particle_animation = ParticleAnimation::new(130, 200.0, 80.0, rect.w, rect.h);
 
         let background = Image::new(ctx, utils::path(ctx, "background.png"))?;
 
-        let mut theme = audio::Source::new(ctx, utils::path(ctx, "main_theme.ogg"))?;
-        theme.set_repeat(true);
-        theme.set_volume(0.2);
-        theme.play()?;
+        let mut music = audio::Source::new(ctx, utils::path(ctx, "main_theme.ogg"))?;
+        music.set_repeat(true);
+        music.set_volume(0.2);
+        music.play()?;
 
         let skins: Vec<PathBuf> = filesystem::read_dir(ctx, utils::path(ctx, "blocks"))?
             .filter(|p| p.extension().unwrap_or_else(|| OsStr::new("")) == "png")
@@ -86,11 +86,11 @@ impl Game {
             .map(|s| ImString::from(String::from(s.file_name().unwrap().to_str().unwrap())))
             .collect();
 
-        let settings = Settings::new("config.toml");
         let settings_state = settings::State {
             skins,
             skins_imstr,
             skin_switched: false,
+            quit: false,
         };
 
         let blocks = Blocks::new(settings.tileset(ctx, &settings_state)?);
@@ -108,7 +108,7 @@ impl Game {
             blocks,
             particle_animation,
             background,
-            theme,
+            music,
             settings,
             settings_state,
         })
@@ -147,6 +147,10 @@ impl Game {
 
         if self.settings_state.skin_switched {
             self.blocks = Blocks::new(self.settings.tileset(ctx, &self.settings_state)?);
+        }
+
+        if (self.music.volume() - self.settings.music_volume).abs() > 0.01 {
+            self.music.set_volume(self.settings.music_volume);
         }
 
         self.matrix.update(ctx);
