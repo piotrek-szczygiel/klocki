@@ -20,10 +20,18 @@ addons:
   apt:
     packages:
       - libssl-dev
-#cache: cargo
-
 before_install:
   - if [[ "${TRAVIS_OS_NAME}" == "linux" ]]; then
       sudo apt-get -qq update
       && sudo apt-get install -y libasound2-dev libudev-dev;
     fi
+deploy:
+  provider: releases
+  api_key:
+    secure: UrsXfy9noE68JKh8XifMo8/cDHGG/+q51bvrWHEPil8hY2Pjb+X51PIVfGayNZcaatNvGbzj4gzxonKmtQ+bqnYxqou3YrEAQmxzk4lN4lZ7YnyIILYgZH3agUeSUNBExN0E7LGY3gpL0+xpkSNTJ2V8kq18tP0QqPGvnffccIK9E23+1tqZ6x6sAbFfRvr4drkIGk0/Yo8ZGxXejAC12EAXdabpXkii0pYyJ6l+FCXTYJua0l+9wHwdHuHgsf2810qvEoPMa9Gz5uRrcZodSITGCZ268EHExYWXXKyg75anUBaPzUXF2quO/mFYb0JtIWKA5s+4X3Z+dnV+L3326odtKZAKzO1/oNpdBFDSGSI7sVUTGPmCsTzljMQW9Az7FcpM3G6vTgNCs3MnE3QIqCnJ79cSdl0jQfgF2HzFGdYqdemi0OBrpyOWZy5R104d2d3pPyYlYqWXUCO6oLvuLlVInPVA53AtwsS0P6SN7WPtzpbwN6si4Rr00swZJa5SA0fB5s18GafWMusPs/xVgOJrk9tvIJB05iJ54Io0MwpYtvqy2lQFFmP7RJEsqNFlwCrv5jVRkkY0Zvgi7AYBxBTKtF5HAOta5b6cdZwQXsAv5CQlbYvdhhUMEkl0rtTkkrLUw9xHCCqs/a/ub/oZNhwWNG5cPlKv5L53/68pXc8=
+  file:
+    - "target/release/tetris.exe"
+  skip_cleanup: true
+  draft: true
+  on:
+    tags: true
