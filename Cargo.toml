@@ -4,6 +4,12 @@ version = "0.1.0"
 authors = ["Piotr Szczygieł <szczygiel.p@gmail.com>"]
 edition = "2018"
 
+description = "Multiplayer Tetris clone"
+license = "MIT"
+readme = "README.md"
+categories = ["games"]
+repository = "https://github.com/piotrek-szczygiel/tetris"
+
 [profile.dev]
 opt-level = 1
 
@@ -29,3 +35,8 @@ imgui-gfx-renderer = "0.2"
 walkdir = "2.2"
 winres = "0.1"
 zip = "0.5"
+
+[package.metadata.bundle]
+identifier = "dev.szczygiel.tetris"
+icon = ["resources/icon.ico"]
+category = "Game"

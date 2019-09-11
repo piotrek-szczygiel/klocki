@@ -1,21 +1,13 @@
 sudo: true
 language: rust
 script:
-  - cargo build --release --verbose --all
-  - cargo test --release --verbose --all
+  - cargo build --release --verbose --all && cargo test --release --verbose --all
 rust:
   - stable
-  - beta
-  - nightly
 os:
   - linux
   - osx
   - windows
-matrix:
-  allow_failures:
-    - rust: nightly
-    - os: windows
-  fast_finish: true
 addons:
   apt:
     packages:
@@ -25,12 +17,30 @@ before_install:
       sudo apt-get -qq update
       && sudo apt-get install -y libasound2-dev libudev-dev;
     fi
+before_deploy:
+  - if [[ "${TRAVIS_OS_NAME}" == "windows" ]]; then
+      mv target/release/tetris.exe target/release/tetris-windows.exe;
+    fi
+  - if [[ "${TRAVIS_OS_NAME}" == "linux" ]]; then
+      cargo install cargo-bundle && cargo bundle --release
+      && mv target/release/bundle/deb/*.deb target/release/tetris-linux.deb;
+    fi
+  - if [[ "${TRAVIS_OS_NAME}" == "osx" ]]; then
+      cargo install cargo-bundle && cargo bundle --release
+      && pushd target/release/bundle/osx
+      && zip -r tetris-mac.zip tetris.app
+      && popd
+      && mv target/release/bundle/osx/tetris-mac.zip target/release/tetris-mac.zip;
+    fi
 deploy:
   provider: releases
   api_key:
     secure: UrsXfy9noE68JKh8XifMo8/cDHGG/+q51bvrWHEPil8hY2Pjb+X51PIVfGayNZcaatNvGbzj4gzxonKmtQ+bqnYxqou3YrEAQmxzk4lN4lZ7YnyIILYgZH3agUeSUNBExN0E7LGY3gpL0+xpkSNTJ2V8kq18tP0QqPGvnffccIK9E23+1tqZ6x6sAbFfRvr4drkIGk0/Yo8ZGxXejAC12EAXdabpXkii0pYyJ6l+FCXTYJua0l+9wHwdHuHgsf2810qvEoPMa9Gz5uRrcZodSITGCZ268EHExYWXXKyg75anUBaPzUXF2quO/mFYb0JtIWKA5s+4X3Z+dnV+L3326odtKZAKzO1/oNpdBFDSGSI7sVUTGPmCsTzljMQW9Az7FcpM3G6vTgNCs3MnE3QIqCnJ79cSdl0jQfgF2HzFGdYqdemi0OBrpyOWZy5R104d2d3pPyYlYqWXUCO6oLvuLlVInPVA53AtwsS0P6SN7WPtzpbwN6si4Rr00swZJa5SA0fB5s18GafWMusPs/xVgOJrk9tvIJB05iJ54Io0MwpYtvqy2lQFFmP7RJEsqNFlwCrv5jVRkkY0Zvgi7AYBxBTKtF5HAOta5b6cdZwQXsAv5CQlbYvdhhUMEkl0rtTkkrLUw9xHCCqs/a/ub/oZNhwWNG5cPlKv5L53/68pXc8=
+  file_glob: true
   file:
-    - "target/release/tetris.exe"
+    - "target/release/tetris-windows.exe"
+    - "target/release/tetris-linux.deb"
+    - "target/release/tetris-mac.zip"
   skip_cleanup: true
   draft: true
   on:
