@@ -1,15 +1,14 @@
-use std::{ffi::OsStr, path::PathBuf, time::Duration};
+use std::{ffi::OsStr, time::Duration};
 
 use crate::{
     bag::Bag,
     blocks::Blocks,
+    global::Global,
     holder::Holder,
-    imgui_wrapper::ImGuiWrapper,
     input::{Action, Input},
     matrix::{self, Matrix},
     particles::ParticleAnimation,
     piece::Piece,
-    settings::{self, Settings},
     utils,
 };
 
@@ -40,13 +39,10 @@ pub struct Game {
     particle_animation: ParticleAnimation,
     background: Image,
     music: audio::Source,
-
-    pub settings: Settings,
-    pub settings_state: settings::State,
 }
 
 impl Game {
-    pub fn new(ctx: &mut Context, settings: Settings) -> GameResult<Game> {
+    pub fn new(ctx: &mut Context, g: &mut Global) -> GameResult<Game> {
         let repeat = Some((150, 50));
         let mut input = Input::new();
         input
@@ -71,29 +67,24 @@ impl Game {
         let rect = graphics::screen_coordinates(ctx);
         let particle_animation = ParticleAnimation::new(130, 200.0, 80.0, rect.w, rect.h);
 
-        let background = Image::new(ctx, utils::path(ctx, "background.png"))?;
+        let background = Image::new(ctx, utils::path(ctx, "background.jpg"))?;
 
         let mut music = audio::Source::new(ctx, utils::path(ctx, "main_theme.ogg"))?;
         music.set_repeat(true);
         music.set_volume(0.2);
         music.play()?;
 
-        let skins: Vec<PathBuf> = filesystem::read_dir(ctx, utils::path(ctx, "blocks"))?
+        g.settings_state.skins = filesystem::read_dir(ctx, utils::path(ctx, "blocks"))?
             .filter(|p| p.extension().unwrap_or_else(|| OsStr::new("")) == "png")
             .collect();
-        let skins_imstr: Vec<ImString> = skins
+        g.settings_state.skins_imstr = g
+            .settings_state
+            .skins
             .iter()
             .map(|s| ImString::from(String::from(s.file_name().unwrap().to_str().unwrap())))
             .collect();
 
-        let settings_state = settings::State {
-            skins,
-            skins_imstr,
-            skin_switched: false,
-            quit: false,
-        };
-
-        let blocks = Blocks::new(settings.tileset(ctx, &settings_state)?);
+        let blocks = Blocks::new(g.settings.tileset(ctx, &g.settings_state)?);
 
         Ok(Game {
             input,
@@ -109,8 +100,6 @@ impl Game {
             particle_animation,
             background,
             music,
-            settings,
-            settings_state,
         })
     }
 
@@ -130,31 +119,31 @@ impl Game {
 
     fn reset_fall(&mut self) {
         if self.still > self.fall_interval {
-            self.still -= self.fall_interval;
+            self.still -= self.fall_interval
         } else {
             self.still = Duration::new(0, 0);
         }
     }
 
-    pub fn update(&mut self, ctx: &mut Context, imgui: &ImGuiWrapper) -> GameResult<()> {
-        if self.settings.animated_background {
+    pub fn update(&mut self, ctx: &mut Context, g: &Global) -> GameResult<()> {
+        if g.settings.animated_background {
             self.particle_animation.update(ctx)?;
         }
 
-        if imgui.state.debug_t_spin_tower {
+        if g.imgui_state.debug_t_spin_tower {
             self.matrix.debug_tower();
         }
 
-        if self.settings_state.skin_switched {
-            self.blocks = Blocks::new(self.settings.tileset(ctx, &self.settings_state)?);
+        if g.settings_state.skin_switched {
+            self.blocks = Blocks::new(g.settings.tileset(ctx, &g.settings_state)?);
         }
 
-        if (self.music.volume() - self.settings.music_volume).abs() > 0.01 {
-            self.music.set_volume(self.settings.music_volume);
+        if (self.music.volume() - g.settings.music_volume).abs() > 0.01 {
+            self.music.set_volume(g.settings.music_volume);
         }
 
         self.matrix.update(ctx);
-        if self.game_over || self.matrix.blocked() || imgui.state.paused {
+        if self.game_over || self.matrix.blocked() || g.imgui_state.paused {
             return Ok(());
         }
 
@@ -226,16 +215,30 @@ impl Game {
         Ok(())
     }
 
-    pub fn draw(&mut self, ctx: &mut Context) -> GameResult<()> {
-        graphics::draw(ctx, &self.background, graphics::DrawParam::new())?;
+    pub fn draw(&mut self, ctx: &mut Context, g: &Global) -> GameResult<()> {
+        let coords = graphics::screen_coordinates(ctx);
+        let ratio = coords.w / coords.h;
 
-        let block_size = self.settings.block_size;
+        graphics::draw(
+            ctx,
+            &self.background,
+            graphics::DrawParam::new().scale(Vector2::new(
+                if ratio > (21.0 / 9.0) {
+                    ratio / (21.0 / 9.0)
+                } else {
+                    1.0
+                },
+                1.0,
+            )),
+        )?;
+
+        let block_size = g.settings.block_size;
 
         self.particle_animation.draw(ctx)?;
 
         let position = Point2::new(
-            (1920 - matrix::WIDTH * block_size) as f32 / 2.0,
-            (1080 - matrix::HEIGHT * block_size) as f32 / 2.0,
+            (coords.w - (matrix::WIDTH * block_size) as f32) / 2.0,
+            (coords.h - (matrix::HEIGHT * block_size) as f32) / 2.0,
         );
 
         let ui_block_size = ((block_size * 3) as f32 / 4.0) as i32;
@@ -296,7 +299,7 @@ impl Game {
         self.piece
             .draw(ctx, position, &mut self.blocks, block_size, 1.0)?;
 
-        if self.settings.ghost_piece {
+        if g.settings.ghost_piece {
             let mut ghost = self.piece.clone();
             if ghost.fall(&self.matrix) >= ghost.grid().height {
                 ghost.draw(ctx, position, &mut self.blocks, block_size, 0.1)?;

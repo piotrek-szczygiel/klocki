@@ -3,7 +3,7 @@ use rand_distr::{Distribution, Normal, Uniform};
 use ggez::{
     graphics::{self, Color, DrawMode, DrawParam, MeshBuilder},
     nalgebra::{self, Point2, Vector2},
-    Context, GameResult,
+    timer, Context, GameResult,
 };
 
 use crate::utils;
@@ -36,8 +36,10 @@ impl Particle {
         let uniform_x = Uniform::new(0.01, 0.99);
         let uniform_y = Uniform::new(0.01, 0.99);
 
-        let uniform_vx = Uniform::new(-1.0, 1.0);
-        let uniform_vy = Uniform::new(-1.0, 1.0);
+        let uniform_vx = Uniform::new(0.05, 1.0);
+        let uniform_vy = Uniform::new(0.05, 1.0);
+
+        let uniform_direction = Uniform::new_inclusive(0, 1);
 
         let normal_size = Normal::new(2.0, 0.5).unwrap();
         let uniform_color = Normal::new(0.5, 0.2).unwrap();
@@ -53,7 +55,15 @@ impl Particle {
         }
 
         for _ in 0..n {
-            let speed = Vector2::new(uniform_vx.sample(&mut rng), uniform_vy.sample(&mut rng));
+            let direction = if uniform_direction.sample(&mut rng) == 0 {
+                -1.0
+            } else {
+                1.0
+            };
+
+            let speed =
+                Vector2::new(uniform_vx.sample(&mut rng), uniform_vy.sample(&mut rng)) * direction;
+
             let size = clamp(normal_size.sample(&mut rng), 1.0, 5.0);
 
             let position = Point2::new(
@@ -97,6 +107,10 @@ impl ParticleAnimation {
     }
 
     pub fn update(&mut self, ctx: &mut Context) -> GameResult<()> {
+        let rect = graphics::screen_coordinates(ctx);
+        self.width = rect.w;
+        self.height = rect.h;
+
         let dt = utils::dt_f32(ctx);
         let pos = utils::mouse_position_coords(ctx);
 
@@ -116,7 +130,11 @@ impl ParticleAnimation {
                 particle.speed[1] = -particle.speed[1];
             }
 
-            let distance = nalgebra::distance(&pos, &particle.position);
+            let distance = if timer::time_since_start(ctx).as_millis() < 2000 {
+                MOUSE_THRESHOLD
+            } else {
+                nalgebra::distance(&pos, &particle.position)
+            };
 
             if distance < MOUSE_THRESHOLD {
                 let mut direction = Vector2::new(0.0, 0.0);
@@ -134,16 +152,16 @@ impl ParticleAnimation {
                 }
 
                 particle.speed +=
-                    direction * dt * (MOUSE_THRESHOLD - distance) / MOUSE_THRESHOLD * 50.0;
+                    direction * dt * (MOUSE_THRESHOLD - distance).powf(2.0) / MOUSE_THRESHOLD;
             } else {
                 if particle.speed[0].abs() > particle.starting_speed[0] {
                     particle.speed[0] -=
-                        particle.speed[0].signum() * dt * particle.starting_speed[0] * 50.0;
+                        particle.speed[0].signum() * dt * particle.starting_speed[0] * 10.0;
                 }
 
                 if particle.speed[1].abs() > particle.starting_speed[1] {
                     particle.speed[1] -=
-                        particle.speed[1].signum() * dt * particle.starting_speed[1] * 50.0;
+                        particle.speed[1].signum() * dt * particle.starting_speed[1] * 10.0;
                 }
             }
         }

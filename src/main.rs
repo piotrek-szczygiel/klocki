@@ -1,6 +1,7 @@
 mod bag;
 mod blocks;
 mod game;
+mod global;
 mod holder;
 mod imgui_wrapper;
 mod input;
@@ -13,15 +14,15 @@ mod utils;
 
 use std::time::Duration;
 
-use crate::{game::Game, imgui_wrapper::ImGuiWrapper, settings::Settings};
+use crate::{game::Game, global::Global, imgui_wrapper::ImGuiWrapper};
 
 use env_logger;
 use log::{self, LevelFilter};
 
 use ggez::{
-    conf::{self, WindowMode},
+    conf,
     event::{self, EventHandler, KeyMods, MouseButton},
-    graphics,
+    graphics::{self, Rect},
     input::keyboard::KeyCode,
     timer, Context, ContextBuilder, GameResult,
 };
@@ -39,7 +40,7 @@ fn main() {
 }
 
 fn real_main() -> GameResult {
-    let settings = Settings::new();
+    let g = Global::new();
 
     log::debug!("Creating the context");
     let mut cb = ContextBuilder::new("tetris", "piotrek-szczygiel")
@@ -47,12 +48,12 @@ fn real_main() -> GameResult {
         .window_setup(
             conf::WindowSetup::default()
                 .title("Tetris")
-                .samples(settings.multi_sampling)
+                .samples(g.settings.multi_sampling)
                 .vsync(false),
         )
         .window_mode(
             conf::WindowMode::default()
-                .dimensions(1280.0, 720.0)
+                .dimensions(g.settings.width, g.settings.height)
                 .resizable(true),
         );
 
@@ -75,47 +76,48 @@ fn real_main() -> GameResult {
 
     let (ctx, event_loop) = &mut cb.build()?;
 
-    graphics::set_screen_coordinates(ctx, graphics::Rect::new(0.0, 0.0, 1920.0, 1080.0))?;
     graphics::set_window_icon(ctx, Some(utils::path(ctx, "icon.ico")))?;
 
-    let app = &mut Application::new(ctx, settings)?;
+    let app = &mut Application::new(ctx, g)?;
 
     log::info!("Starting the event loop");
     event::run(ctx, event_loop, app)?;
 
     log::info!("Saving the settings");
-    app.game.settings.save()?;
+    app.g.settings.save().expect("Unable to save settings");
 
-    log::info!("Exiting the application");
     Ok(())
 }
 
 struct Application {
+    g: Global,
     game: game::Game,
     imgui_wrapper: imgui_wrapper::ImGuiWrapper,
     is_fullscreen: bool,
     fullscreen_delay: Duration,
-    window_scale: f32,
 }
 
 impl Application {
-    fn new(ctx: &mut Context, settings: Settings) -> GameResult<Application> {
-        Ok(Application {
-            game: game::Game::new(ctx, settings)?,
+    fn new(ctx: &mut Context, mut g: Global) -> GameResult<Application> {
+        let mut app = Application {
+            game: game::Game::new(ctx, &mut g)?,
+            g,
             imgui_wrapper: ImGuiWrapper::new(ctx),
             is_fullscreen: false,
             fullscreen_delay: Duration::new(0, 0),
-            window_scale: 1280.0 / 1920.0,
-        })
+        };
+
+        app.resize_event(ctx, app.g.settings.width, app.g.settings.height);
+
+        Ok(app)
     }
 }
 
 impl EventHandler for Application {
     fn update(&mut self, ctx: &mut Context) -> GameResult<()> {
-        if self.game.settings.fullscreen != self.is_fullscreen
-            && self.fullscreen_delay > Duration::from_millis(500)
-        {
-            self.is_fullscreen = self.game.settings.fullscreen;
+        let fullscreen = self.g.settings.fullscreen;
+        if fullscreen != self.is_fullscreen && self.fullscreen_delay > Duration::from_millis(500) {
+            self.is_fullscreen = fullscreen;
             self.fullscreen_delay = Duration::new(0, 0);
 
             let fullscreen_type = if self.is_fullscreen {
@@ -128,35 +130,23 @@ impl EventHandler for Application {
             self.fullscreen_delay += timer::delta(ctx);
         }
 
-        if (self.window_scale - self.game.settings.window_scale).abs() > 0.01 {
-            self.window_scale = self.game.settings.window_scale;
-            graphics::set_mode(
-                ctx,
-                WindowMode::default()
-                    .dimensions(1920.0 * self.window_scale, 1080.0 * self.window_scale)
-                    .resizable(true),
-            )
-            .unwrap_or_else(|e| log::error!("Unable to change resolution: {:?}", e));
+        if self.g.imgui_state.restart {
+            self.game = Game::new(ctx, &mut self.g)?;
         }
 
-        if self.imgui_wrapper.state.restart {
-            self.game = Game::new(ctx, Settings::new())?;
-        }
-
-        if self.game.settings_state.quit {
+        if self.g.settings_state.quit {
             event::quit(ctx);
         }
 
-        self.game.update(ctx, &self.imgui_wrapper)?;
+        self.game.update(ctx, &self.g)?;
 
         Ok(())
     }
 
     fn draw(&mut self, ctx: &mut Context) -> GameResult<()> {
         graphics::clear(ctx, graphics::WHITE);
-        self.game.draw(ctx)?;
-        self.imgui_wrapper
-            .draw(ctx, &mut self.game.settings, &mut self.game.settings_state);
+        self.game.draw(ctx, &self.g)?;
+        self.imgui_wrapper.draw(ctx, &mut self.g);
         graphics::present(ctx)?;
         Ok(())
     }
@@ -195,12 +185,20 @@ impl EventHandler for Application {
 
     fn key_up_event(&mut self, ctx: &mut Context, keycode: KeyCode, _keymods: KeyMods) {
         match keycode {
-            KeyCode::F11 => {
-                self.game.settings.fullscreen = !self.game.settings.fullscreen;
-            }
+            KeyCode::F11 => self.g.settings.fullscreen ^= true,
             KeyCode::D => self.imgui_wrapper.toggle_window(),
             KeyCode::Escape => event::quit(ctx),
             _ => (),
         }
+    }
+
+    fn resize_event(&mut self, ctx: &mut Context, width: f32, height: f32) {
+        self.g.settings.width = width;
+        self.g.settings.height = height;
+
+        let ratio = width / height;
+        let width = 1080.0 * ratio;
+        graphics::set_screen_coordinates(ctx, Rect::new(0.0, 0.0, width, 1080.0))
+            .expect("Unable to change the coordinates");
     }
 }

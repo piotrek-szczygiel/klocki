@@ -7,17 +7,17 @@ use ggez::{event, graphics, timer, Context};
 use imgui::{self, im_str, ImString, StyleColor};
 use imgui_gfx_renderer::{Renderer, Shaders};
 
-use crate::settings::{self, Settings};
+use crate::global::Global;
 
-#[derive(Copy, Clone, PartialEq, Debug, Default)]
+#[derive(Default)]
 struct MouseState {
     pos: (i32, i32),
     pressed: (bool, bool, bool),
     wheel: f32,
 }
 
-#[derive(Copy, Clone)]
-pub struct State {
+#[derive(Default)]
+pub struct ImGuiState {
     pub restart: bool,
     pub paused: bool,
     pub debug_t_spin_tower: bool,
@@ -26,7 +26,6 @@ pub struct State {
 pub struct ImGuiWrapper {
     pub imgui: imgui::Context,
     pub renderer: Renderer<gfx_core::format::Rgba8, gfx_device_gl::Resources>,
-    pub state: State,
     last_frame: Instant,
     mouse_state: MouseState,
     show_debug_window: bool,
@@ -59,23 +58,13 @@ impl ImGuiWrapper {
         ImGuiWrapper {
             imgui,
             renderer,
-            state: State {
-                restart: false,
-                paused: false,
-                debug_t_spin_tower: false,
-            },
             last_frame: Instant::now(),
             mouse_state: MouseState::default(),
             show_debug_window: false,
         }
     }
 
-    pub fn draw(
-        &mut self,
-        ctx: &mut Context,
-        settings: &mut Settings,
-        settings_state: &mut settings::State,
-    ) {
+    pub fn draw(&mut self, ctx: &mut Context, g: &mut Global) {
         self.update_mouse();
 
         let now = Instant::now();
@@ -91,12 +80,6 @@ impl ImGuiWrapper {
 
         let ui = self.imgui.frame();
         {
-            let mut state = State {
-                restart: false,
-                debug_t_spin_tower: false,
-                paused: self.state.paused,
-            };
-
             if self.show_debug_window {
                 imgui::Window::new(im_str!("Debug"))
                     .size([200.0, 200.0], imgui::Condition::Appearing)
@@ -106,13 +89,13 @@ impl ImGuiWrapper {
                         ui.separator();
 
                         if ui.small_button(im_str!("Restart")) {
-                            state.restart = true;
+                            g.imgui_state.restart = true;
                         }
 
-                        ui.checkbox(im_str!("Paused"), &mut state.paused);
+                        ui.checkbox(im_str!("Paused"), &mut g.imgui_state.paused);
 
                         if ui.small_button(im_str!("T-Spin tower")) {
-                            state.debug_t_spin_tower = true;
+                            g.imgui_state.debug_t_spin_tower = true;
                         }
                     });
             }
@@ -126,7 +109,7 @@ impl ImGuiWrapper {
                     menu.end(&ui);
                 }
 
-                settings.draw(settings_state, &ui);
+                g.settings.draw(&mut g.settings_state, &ui);
 
                 ui.separator();
                 ui.text(im_str!("FPS:"));
@@ -144,8 +127,6 @@ impl ImGuiWrapper {
 
                 menu_bar.end(&ui);
             }
-
-            self.state = state;
         }
 
         let (factory, _, encoder, _, render_target) = graphics::gfx_objects(ctx);

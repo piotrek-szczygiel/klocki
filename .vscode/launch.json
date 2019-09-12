@@ -5,24 +5,16 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "Debug Tetris",
-            "type": "cppvsdbg",
+            "type": "lldb",
             "request": "launch",
-            "program": "${workspaceFolder}/target/debug/tetris.exe",
+            "name": "Debug Game",
+            "program": "${workspaceFolder}/target/debug/tetris",
             "args": [],
-            "stopAtEntry": false,
             "cwd": "${workspaceFolder}",
-            "environment": [
-                {
-                    "name": "RUST_BACKTRACE",
-                    "value": "1",
-                },
-                {
-                    "name": "CARGO_MANIFEST_DIR",
-                    "value": "${workspaceFolder}"
-                }
-            ],
-            "externalConsole": false
+            "env": {
+                "RUST_BACKTRACE": "1",
+                "CARGO_MANIFEST_DIR": "${workspaceFolder}"
+            }
         }
     ]
 }

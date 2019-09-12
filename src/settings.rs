@@ -11,8 +11,9 @@ const CONFIG_FILENAME: &str = "config.toml";
 
 #[derive(Serialize, Deserialize)]
 pub struct Settings {
+    pub width: f32,
+    pub height: f32,
     pub fullscreen: bool,
-    pub window_scale: f32,
     pub multi_sampling: NumSamples,
     pub block_size: i32,
     pub ghost_piece: bool,
@@ -21,7 +22,8 @@ pub struct Settings {
     pub music_volume: f32,
 }
 
-pub struct State {
+#[derive(Default)]
+pub struct SettingsState {
     pub skins: Vec<PathBuf>,
     pub skins_imstr: Vec<ImString>,
     pub skin_switched: bool,
@@ -43,8 +45,9 @@ impl Settings {
             settings
         } else {
             Settings {
+                width: 1280.0,
+                height: 720.0,
                 fullscreen: false,
-                window_scale: 0.666,
                 multi_sampling: NumSamples::Zero,
                 block_size: 32,
                 ghost_piece: true,
@@ -92,14 +95,14 @@ impl Settings {
         None
     }
 
-    pub fn tileset(&self, ctx: &mut Context, state: &State) -> GameResult<Image> {
+    pub fn tileset(&self, ctx: &mut Context, state: &SettingsState) -> GameResult<Image> {
         Image::new(
             ctx,
             utils::path(ctx, state.skins[self.skin_id].to_str().unwrap()),
         )
     }
 
-    pub fn draw(&mut self, state: &mut State, ui: &Ui) {
+    pub fn draw(&mut self, state: &mut SettingsState, ui: &Ui) {
         let pos = 120.0;
         let header_color = [0.0, 1.0, 1.0, 1.0];
 
@@ -144,14 +147,6 @@ impl Settings {
                 if open_popup {
                     ui.open_popup(im_str!("Restart needed"));
                 }
-
-                ui.text(im_str!("Window scale"));
-                ui.same_line(pos);
-                let id = ui.push_id(im_str!("window_scale"));
-                imgui::Slider::new(im_str!(""), 0.25..=2.0)
-                    .display_format(im_str!("%.2f"))
-                    .build(&ui, &mut self.window_scale);
-                id.pop(&ui);
             }
 
             ui.separator();
