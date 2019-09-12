@@ -31,7 +31,7 @@ fn main() {
     env_logger::builder()
         .default_format_timestamp(false)
         .filter_module("ggez", LevelFilter::Warn)
-        .filter_module("tetris", LevelFilter::Trace)
+        .filter_module("klocki", LevelFilter::Trace)
         .init();
 
     if let Some(err) = real_main().err() {
@@ -42,12 +42,14 @@ fn main() {
 fn real_main() -> GameResult {
     let g = Global::new();
 
+    const VERSION: &str = env!("CARGO_PKG_VERSION");
+
     log::debug!("Creating the context");
-    let mut cb = ContextBuilder::new("tetris", "piotrek-szczygiel")
+    let mut cb = ContextBuilder::new("klocki", "piotrek-szczygiel")
         .with_conf_file(false)
         .window_setup(
             conf::WindowSetup::default()
-                .title("Tetris")
+                .title(&format!("Klocki v{}", VERSION))
                 .samples(g.settings.multi_sampling)
                 .vsync(false),
         )

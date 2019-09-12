@@ -1,20 +1,31 @@
-# Tetris (work in progress)
+# Klocki
 
-[![Build Status](https://travis-ci.org/piotrek-szczygiel/tetris.svg?branch=master)](https://travis-ci.org/piotrek-szczygiel/tetris)
-[![Build status](https://ci.appveyor.com/api/projects/status/f84px445py8ldj24/branch/master?svg=true)](https://ci.appveyor.com/project/piotrek-szczygiel/tetris/branch/master)
-[![license](https://img.shields.io/badge/license-MIT-blue.svg)](https://github.com/piotrek-szczygiel/tetris/blob/master/LICENSE)
+[![Build Status](https://travis-ci.org/piotrek-szczygiel/klocki.svg?branch=master)](https://travis-ci.org/piotrek-szczygiel/klocki)
+[![Build status](https://ci.appveyor.com/api/projects/status/vjb1uy5nf7306jys/branch/master?svg=true)](https://ci.appveyor.com/project/piotrek-szczygiel/klocki/branch/master)
+[![license](https://img.shields.io/badge/license-MIT-blue.svg)](https://github.com/piotrek-szczygiel/klocki/blob/master/LICENSE)
+[![](https://tokei.rs/b1/github/piotrek-szczygiel/klocki)](https://github.com/piotrek-szczygiel/klocki)
 
-Multiplayer Tetris clone written in [Rust](https://www.rust-lang.org) using the [ggez](https://github.com/ggez/ggez) library.
+An arcade game written in [Rust](https://www.rust-lang.org) using the [ggez](https://github.com/ggez/ggez) library.
 
 ## Supported platforms
 
-* Fully supported: Windows, Linux
-* Might work: Mac
+* Windows
+* Linux
+* Mac
 
+## Download
+
+Visit the [release](https://github.com/piotrek-szczygiel/klocki/releases) tab.
+
+## Music
+
+Music created by [Patrick de Arteaga](https://patrickdearteaga.com)
+
+# Development
 ## Running
 
 ```sh
-git clone https://github.com/piotrek-szczygiel/tetris && cd tetris
+git clone https://github.com/piotrek-szczygiel/klocki && cd klocki
 cargo run --release
 ```
 

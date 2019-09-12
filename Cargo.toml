@@ -1,14 +1,14 @@
 [package]
-name = "tetris"
+name = "klocki"
 version = "0.1.0"
 authors = ["Piotr Szczygieł <szczygiel.p@gmail.com>"]
 edition = "2018"
 
-description = "Multiplayer Tetris clone"
+description = "An arcade game"
 license = "MIT"
 readme = "README.md"
 categories = ["games"]
-repository = "https://github.com/piotrek-szczygiel/tetris"
+repository = "https://github.com/piotrek-szczygiel/klocki"
 
 [profile.dev]
 opt-level = 1
@@ -37,7 +37,7 @@ winres = "0.1"
 zip = "0.5"
 
 [package.metadata.bundle]
-identifier = "dev.szczygiel.tetris"
+identifier = "dev.szczygiel.klocki"
 icon = ["resources/icon.ico"]
 category = "Game"
 deb_depends = ["libasound2", "libudev1"]

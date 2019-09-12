@@ -1,7 +1,7 @@
 os: Visual Studio 2015
 environment:
     global:
-        PROJECT_NAME: tetris
+        PROJECT_NAME: klocki
         RUSTUP_INIT_SKIP_MSVC_CHECK: 1
     matrix:
         - TARGET: x86_64-pc-windows-msvc
@@ -23,5 +23,4 @@ cache:
     - C:\Users\appveyor\.cargo\registry
 
 artifacts:
-    - path: target\release\tetris.exe
-
+    - path: target\release\klocki.exe

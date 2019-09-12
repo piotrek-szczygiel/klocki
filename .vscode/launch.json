@@ -8,7 +8,7 @@
             "type": "lldb",
             "request": "launch",
             "name": "Debug Game",
-            "program": "${workspaceFolder}/target/debug/tetris",
+            "program": "${workspaceFolder}/target/debug/klocki",
             "args": [],
             "cwd": "${workspaceFolder}",
             "env": {

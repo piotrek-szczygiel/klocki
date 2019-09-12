@@ -34,7 +34,7 @@ impl Bag {
         shape.unwrap()
     }
 
-    pub fn peek(&self, n: usize) -> Take<Iter<'_, ShapeType>> {
+    pub fn peek(&self, n: usize) -> Take<Iter<ShapeType>> {
         self.bag.iter().take(n)
     }
 

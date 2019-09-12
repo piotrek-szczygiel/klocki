@@ -69,7 +69,7 @@ impl Game {
 
         let background = Image::new(ctx, utils::path(ctx, "background.jpg"))?;
 
-        let mut music = audio::Source::new(ctx, utils::path(ctx, "main_theme.ogg"))?;
+        let mut music = audio::Source::new(ctx, utils::path(ctx, "chiptronical.ogg"))?;
         music.set_repeat(true);
         music.set_volume(0.2);
         music.play()?;
