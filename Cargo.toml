@@ -40,3 +40,4 @@ zip = "0.5"
 identifier = "dev.szczygiel.tetris"
 icon = ["resources/icon.ico"]
 category = "Game"
+deb_depends = ["libasound2", "libudev1"]
