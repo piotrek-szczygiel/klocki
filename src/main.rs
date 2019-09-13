@@ -56,6 +56,7 @@ fn real_main() -> GameResult {
         .window_mode(
             conf::WindowMode::default()
                 .dimensions(g.settings.width, g.settings.height)
+                .min_dimensions(450.0, 600.0)
                 .resizable(true),
         );
 
@@ -73,7 +74,7 @@ fn real_main() -> GameResult {
     #[cfg(build = "release")]
     {
         log::debug!("Loading resources from baked archive");
-        cb = cb.add_zipfile_bytes(include_bytes!("../resources.zip").to_vec());
+        cb = cb.add_zipfile_bytes(include_bytes!("../target/resources.zip").to_vec());
     }
 
     let (ctx, event_loop) = &mut cb.build()?;

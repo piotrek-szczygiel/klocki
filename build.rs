@@ -19,7 +19,7 @@ fn main() {
     }
 
     let src_dir = "resources";
-    let dst_file = "resources.zip";
+    let dst_file = "target/resources.zip";
 
     let _ = fs::remove_file(Path::new(dst_file));
 

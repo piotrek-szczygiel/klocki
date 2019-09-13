@@ -203,12 +203,12 @@ impl Settings {
                     ui.text(im_str!(
                         "You need to restart the game to apply the settings"
                     ));
-                    // ui.separator();
+                    ui.separator();
 
                     if ui.button(im_str!("Cancel"), [0.0, 0.0]) {
                         ui.close_current_popup();
                     }
-                    ui.same_line_with_spacing(0.0, 30.0);
+                    ui.same_line_with_spacing(0.0, 10.0);
                     if ui.button(im_str!("Quit the game"), [0.0, 0.0]) {
                         state.quit = true;
                     }

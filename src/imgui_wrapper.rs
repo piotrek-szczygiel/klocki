@@ -87,16 +87,12 @@ impl ImGuiWrapper {
                     .build(&ui, || {
                         ui.text(im_str!("Debugging window"));
                         ui.separator();
-
-                        if ui.small_button(im_str!("Restart")) {
-                            g.imgui_state.restart = true;
-                        }
-
+                        g.imgui_state.restart = ui.small_button(im_str!("Restart"));
                         ui.checkbox(im_str!("Paused"), &mut g.imgui_state.paused);
+                        g.imgui_state.debug_t_spin_tower = ui.small_button(im_str!("T-Spin tower"));
 
-                        if ui.small_button(im_str!("T-Spin tower")) {
-                            g.imgui_state.debug_t_spin_tower = true;
-                        }
+                        ui.separator();
+                        ui.text(im_str!("Window size: {}x{}", w, h));
                     });
             }
 
