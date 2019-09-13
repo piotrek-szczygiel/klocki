@@ -20,7 +20,8 @@ Visit the [release](https://github.com/piotrek-szczygiel/klocki/releases) tab.
 ## Resources
 
 Music created by [Patrick de Arteaga](https://patrickdearteaga.com).  
-Icon made by [Vitaly Gorbachev](https://www.flaticon.com/authors/vitaly-gorbachev) from [www.flaticon.com](https://www.flaticon.com).
+Icon made by [Vitaly Gorbachev](https://www.flaticon.com/authors/vitaly-gorbachev) from [www.flaticon.com](https://www.flaticon.com).  
+Some assets taken from [NullpoMino](https://github.com/nullpomino/nullpomino) project.
 
 ## Development
 
