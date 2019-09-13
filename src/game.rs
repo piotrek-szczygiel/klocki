@@ -299,10 +299,16 @@ impl Game {
         self.piece
             .draw(ctx, position, &mut self.blocks, block_size, 1.0)?;
 
-        if g.settings.ghost_piece {
+        if g.settings.ghost_piece > 0.0 {
             let mut ghost = self.piece.clone();
             if ghost.fall(&self.matrix) >= ghost.grid().height {
-                ghost.draw(ctx, position, &mut self.blocks, block_size, 0.1)?;
+                ghost.draw(
+                    ctx,
+                    position,
+                    &mut self.blocks,
+                    block_size,
+                    g.settings.ghost_piece,
+                )?;
             }
         }
 

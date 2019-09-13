@@ -33,33 +33,28 @@ impl Matrix {
 
     pub fn build_grid(&mut self, ctx: &mut Context, block_size: i32) -> GameResult {
         let grid_mesh = &mut MeshBuilder::new();
-        let grid_color = Color::new(0.8, 0.9, 1.0, 0.3);
-        let outline_color = Color::new(0.0, 1.0, 1.0, 0.8);
+        let grid_color = Color::new(0.1, 0.1, 0.1, 1.0);
+        let outline_color = Color::new(0.2, 1.0, 0.8, 0.8);
 
-        for x in 1..WIDTH {
-            let x = (x * block_size) as f32;
+        for y in VANISH..VANISH + HEIGHT {
+            for x in 0..WIDTH {
+                if self.grid[y as usize][x as usize] != 0 {
+                    continue;
+                }
 
-            grid_mesh.line(
-                &[
-                    Point2::new(x, 0.0),
-                    Point2::new(x, (block_size * HEIGHT) as f32),
-                ],
-                1.0,
-                grid_color,
-            )?;
-        }
+                let y = y - VANISH;
 
-        for y in 1..HEIGHT {
-            let y = (y * block_size) as f32;
-
-            grid_mesh.line(
-                &[
-                    Point2::new(0.0, y),
-                    Point2::new((block_size * WIDTH) as f32, y),
-                ],
-                1.0,
-                grid_color,
-            )?;
+                grid_mesh.rectangle(
+                    DrawMode::stroke(1.0),
+                    Rect::new(
+                        (x * block_size) as f32,
+                        (y * block_size) as f32,
+                        block_size as f32,
+                        block_size as f32,
+                    ),
+                    grid_color,
+                );
+            }
         }
 
         grid_mesh.rectangle(
@@ -163,22 +158,7 @@ impl Matrix {
         blocks: &mut Blocks,
         block_size: i32,
     ) -> GameResult {
-        if self.grid_mesh.is_none() {
-            self.build_grid(ctx, block_size)?;
-        } else {
-            let old_size = self.grid_mesh.as_ref().unwrap().1;
-
-            if block_size != old_size {
-                self.build_grid(ctx, block_size)?;
-                self.grid_mesh.as_mut().unwrap().1 = block_size;
-            }
-        }
-
-        graphics::draw(
-            ctx,
-            &self.grid_mesh.as_ref().unwrap().0,
-            DrawParam::new().dest(position),
-        )?;
+        self.build_grid(ctx, block_size)?;
 
         blocks.clear();
 
@@ -194,11 +174,17 @@ impl Matrix {
                     position[1] + ((y - 1) * block_size) as f32,
                 );
 
-                blocks.add(block, block_size, dest, 0.5);
+                blocks.add(block, block_size, dest, 0.6);
             }
         }
 
         blocks.draw(ctx)?;
+
+        graphics::draw(
+            ctx,
+            &self.grid_mesh.as_ref().unwrap().0,
+            DrawParam::new().dest(position),
+        )?;
 
         Ok(())
     }

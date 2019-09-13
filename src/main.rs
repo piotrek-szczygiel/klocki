@@ -40,56 +40,60 @@ fn main() {
 }
 
 fn real_main() -> GameResult {
-    let g = Global::new();
+    loop {
+        let g = Global::new();
 
-    const VERSION: &str = env!("CARGO_PKG_VERSION");
+        const VERSION: &str = env!("CARGO_PKG_VERSION");
 
-    log::debug!("Creating the context");
-    let mut cb = ContextBuilder::new("klocki", "piotrek-szczygiel")
-        .with_conf_file(false)
-        .window_setup(
-            conf::WindowSetup::default()
-                .title(&format!("Klocki v{}", VERSION))
-                .samples(g.settings.multi_sampling)
-                .vsync(false),
-        )
-        .window_mode(
-            conf::WindowMode::default()
-                .dimensions(g.settings.width, g.settings.height)
-                .min_dimensions(450.0, 600.0)
-                .resizable(true),
-        );
+        log::debug!("Creating the context");
+        let mut cb = ContextBuilder::new("klocki", "piotrek-szczygiel")
+            .with_conf_file(false)
+            .window_setup(
+                conf::WindowSetup::default()
+                    .title(&format!("Klocki v{}", VERSION))
+                    .samples(g.settings.multi_sampling)
+                    .vsync(false),
+            )
+            .window_mode(
+                conf::WindowMode::default()
+                    .dimensions(g.settings.width, g.settings.height)
+                    .min_dimensions(450.0, 600.0)
+                    .resizable(true),
+            );
 
-    // Read from resources directory on debug mode
-    #[cfg(build = "debug")]
-    {
-        log::debug!("Adding resources path");
-        let manifest_dir = std::env::var("CARGO_MANIFEST_DIR").unwrap();
-        let mut path = std::path::PathBuf::from(manifest_dir);
-        path.push("resources");
-        cb = cb.add_resource_path(path);
+        // Read from resources directory on debug mode
+        #[cfg(build = "debug")]
+        {
+            log::debug!("Adding resources path");
+            let manifest_dir = std::env::var("CARGO_MANIFEST_DIR").unwrap();
+            let mut path = std::path::PathBuf::from(manifest_dir);
+            path.push("resources");
+            cb = cb.add_resource_path(path);
+        }
+
+        // Read from baked in zip file on release mode
+        #[cfg(build = "release")]
+        {
+            log::debug!("Loading resources from baked archive");
+            cb = cb.add_zipfile_bytes(include_bytes!("../target/resources.zip").to_vec());
+        }
+
+        let (ctx, event_loop) = &mut cb.build()?;
+
+        graphics::set_window_icon(ctx, Some(utils::path(ctx, "icon.ico")))?;
+
+        let app = &mut Application::new(ctx, g)?;
+
+        log::info!("Starting the event loop");
+        event::run(ctx, event_loop, app)?;
+
+        log::info!("Saving the settings");
+        app.g.settings.save().expect("Unable to save settings");
+
+        if !app.g.settings_state.restart {
+            break Ok(());
+        }
     }
-
-    // Read from baked in zip file on release mode
-    #[cfg(build = "release")]
-    {
-        log::debug!("Loading resources from baked archive");
-        cb = cb.add_zipfile_bytes(include_bytes!("../target/resources.zip").to_vec());
-    }
-
-    let (ctx, event_loop) = &mut cb.build()?;
-
-    graphics::set_window_icon(ctx, Some(utils::path(ctx, "icon.ico")))?;
-
-    let app = &mut Application::new(ctx, g)?;
-
-    log::info!("Starting the event loop");
-    event::run(ctx, event_loop, app)?;
-
-    log::info!("Saving the settings");
-    app.g.settings.save().expect("Unable to save settings");
-
-    Ok(())
 }
 
 struct Application {
@@ -121,7 +125,7 @@ impl EventHandler for Application {
         let start = Instant::now();
 
         let fullscreen = self.g.settings.fullscreen;
-        if fullscreen != self.is_fullscreen && self.fullscreen_delay > Duration::from_millis(500) {
+        if fullscreen != self.is_fullscreen && self.fullscreen_delay > Duration::from_millis(300) {
             self.is_fullscreen = fullscreen;
             self.fullscreen_delay = Duration::new(0, 0);
 
@@ -139,7 +143,7 @@ impl EventHandler for Application {
             self.game = Game::new(ctx, &mut self.g)?;
         }
 
-        if self.g.settings_state.quit {
+        if self.g.settings_state.restart {
             event::quit(ctx);
         }
 
@@ -199,6 +203,7 @@ impl EventHandler for Application {
             KeyCode::F11 => self.g.settings.fullscreen ^= true,
             KeyCode::D => self.imgui_wrapper.toggle_window(),
             KeyCode::Escape => event::quit(ctx),
+            KeyCode::LAlt => self.g.settings.hide_menu ^= true,
             _ => (),
         }
     }

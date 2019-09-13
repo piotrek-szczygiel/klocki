@@ -3,7 +3,7 @@ use std::{env, fs, io, path::PathBuf};
 use crate::utils;
 
 use ggez::{conf::NumSamples, graphics::Image, Context, GameResult};
-use imgui::{self, im_str, ImStr, ImString, Ui};
+use imgui::{self, im_str, ComboBox, ImStr, ImString, Slider, Ui};
 use serde::{Deserialize, Serialize};
 use toml;
 
@@ -16,8 +16,9 @@ pub struct Settings {
     pub fullscreen: bool,
     pub multi_sampling: NumSamples,
     pub vsync: bool,
+    pub hide_menu: bool,
     pub block_size: i32,
-    pub ghost_piece: bool,
+    pub ghost_piece: f32,
     pub animated_background: bool,
     pub skin_id: usize,
     pub music_volume: f32,
@@ -28,7 +29,7 @@ pub struct SettingsState {
     pub skins: Vec<PathBuf>,
     pub skins_imstr: Vec<ImString>,
     pub skin_switched: bool,
-    pub quit: bool,
+    pub restart: bool,
 }
 
 static SAMPLINGS: [NumSamples; 6] = [
@@ -51,8 +52,9 @@ impl Settings {
                 fullscreen: false,
                 multi_sampling: NumSamples::Zero,
                 vsync: true,
+                hide_menu: false,
                 block_size: 32,
-                ghost_piece: true,
+                ghost_piece: 0.2,
                 animated_background: true,
                 skin_id: 0,
                 music_volume: 0.2,
@@ -127,9 +129,9 @@ impl Settings {
 
                 ui.text(im_str!("Multi-Sampling"));
                 ui.same_line(pos);
-                let mut open_popup = false;
+                let mut restart_popup = false;
                 let id = ui.push_id(im_str!("sampling"));
-                if imgui::ComboBox::new(im_str!("")).build_simple_string(
+                if ComboBox::new(im_str!("")).build_simple_string(
                     &ui,
                     &mut sampling_id,
                     &[
@@ -142,7 +144,7 @@ impl Settings {
                     ],
                 ) {
                     self.multi_sampling = SAMPLINGS[sampling_id];
-                    open_popup = true;
+                    restart_popup = true;
                 }
                 id.pop(&ui);
 
@@ -150,11 +152,19 @@ impl Settings {
                 ui.same_line(pos);
                 let id = ui.push_id(im_str!("vsync"));
                 if ui.checkbox(im_str!(""), &mut self.vsync) {
-                    open_popup = true;
+                    restart_popup = true;
                 }
                 id.pop(&ui);
 
-                if open_popup {
+                ui.text(im_str!("Hide menu"));
+                ui.same_line(pos);
+                let id = ui.push_id(im_str!("hide_menu"));
+                if ui.checkbox(im_str!(""), &mut self.hide_menu) {
+                    ui.open_popup(im_str!("Menu visibility information"));
+                }
+                id.pop(&ui);
+
+                if restart_popup {
                     ui.open_popup(im_str!("Restart needed"));
                 }
             }
@@ -167,7 +177,9 @@ impl Settings {
                 ui.text(im_str!("Ghost piece"));
                 ui.same_line(pos);
                 let id = ui.push_id(im_str!("ghost_piece"));
-                ui.checkbox(im_str!(""), &mut self.ghost_piece);
+                Slider::new(im_str!(""), 0.0..=1.0)
+                    .display_format(im_str!("%.2f"))
+                    .build(&ui, &mut self.ghost_piece);
                 id.pop(&ui);
 
                 ui.text(im_str!("Background"));
@@ -179,18 +191,14 @@ impl Settings {
                 ui.text(im_str!("Block size"));
                 ui.same_line(pos);
                 let id = ui.push_id(im_str!("block_size"));
-                imgui::Slider::new(im_str!(""), 16..=44).build(&ui, &mut self.block_size);
+                Slider::new(im_str!(""), 16..=44).build(&ui, &mut self.block_size);
                 id.pop(&ui);
 
                 ui.text(im_str!("Skin"));
                 ui.same_line(pos);
                 let skins: Vec<&ImStr> = state.skins_imstr.iter().map(|s| s.as_ref()).collect();
                 let id = ui.push_id(im_str!("skins"));
-                if imgui::ComboBox::new(im_str!("")).build_simple_string(
-                    &ui,
-                    &mut self.skin_id,
-                    &skins,
-                ) {
+                if ComboBox::new(im_str!("")).build_simple_string(&ui, &mut self.skin_id, &skins) {
                     state.skin_switched = true;
                 }
                 id.pop(&ui);
@@ -204,26 +212,26 @@ impl Settings {
                 ui.text(im_str!("Music volume"));
                 ui.same_line(pos);
                 let id = ui.push_id(im_str!("music_volume"));
-                imgui::Slider::new(im_str!(""), 0.0..=1.0)
+                Slider::new(im_str!(""), 0.0..=1.0)
                     .display_format(im_str!("%.2f"))
                     .build(&ui, &mut self.music_volume);
                 id.pop(&ui);
-
-                ui.popup_modal(im_str!("Restart needed")).build(|| {
-                    ui.text(im_str!(
-                        "You need to restart the game to apply the settings"
-                    ));
-                    ui.separator();
-
-                    if ui.button(im_str!("Cancel"), [0.0, 0.0]) {
-                        ui.close_current_popup();
-                    }
-                    ui.same_line_with_spacing(0.0, 10.0);
-                    if ui.button(im_str!("Quit the game"), [0.0, 0.0]) {
-                        state.quit = true;
-                    }
-                });
             }
+
+            ui.popup_modal(im_str!("Restart needed")).build(|| {
+                ui.text(im_str!(
+                    "You need to restart the game to apply these settings"
+                ));
+                ui.separator();
+
+                if ui.button(im_str!("Cancel"), [0.0, 0.0]) {
+                    ui.close_current_popup();
+                }
+                ui.same_line_with_spacing(0.0, 10.0);
+                if ui.button(im_str!("Restart the game"), [0.0, 0.0]) {
+                    state.restart = true;
+                }
+            });
 
             menu.end(ui);
         }

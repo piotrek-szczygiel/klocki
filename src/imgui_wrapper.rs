@@ -123,32 +123,34 @@ impl ImGuiWrapper {
                     });
             }
 
-            if let Some(menu_bar) = ui.begin_main_menu_bar() {
-                if let Some(menu) = ui.begin_menu(im_str!("File"), true) {
-                    if imgui::MenuItem::new(im_str!("Quit")).build(&ui) {
-                        event::quit(ctx);
+            if !g.settings.hide_menu {
+                if let Some(menu_bar) = ui.begin_main_menu_bar() {
+                    if let Some(menu) = ui.begin_menu(im_str!("File"), true) {
+                        if imgui::MenuItem::new(im_str!("Quit")).build(&ui) {
+                            event::quit(ctx);
+                        }
+
+                        menu.end(&ui);
                     }
 
-                    menu.end(&ui);
+                    g.settings.draw(&mut g.settings_state, &ui);
+
+                    ui.separator();
+                    ui.text(im_str!("FPS:"));
+
+                    let fps = timer::fps(ctx) as i32;
+                    let color = if fps > 55 {
+                        [0.0, 1.0, 0.0, 1.0]
+                    } else {
+                        [1.0, 0.0, 0.0, 1.0]
+                    };
+
+                    let token = ui.push_style_color(StyleColor::Text, color);
+                    ui.text(ImString::from(fps.to_string()));
+                    token.pop(&ui);
+
+                    menu_bar.end(&ui);
                 }
-
-                g.settings.draw(&mut g.settings_state, &ui);
-
-                ui.separator();
-                ui.text(im_str!("FPS:"));
-
-                let fps = timer::fps(ctx) as i32;
-                let color = if fps > 55 {
-                    [0.0, 1.0, 0.0, 1.0]
-                } else {
-                    [1.0, 0.0, 0.0, 1.0]
-                };
-
-                let token = ui.push_style_color(StyleColor::Text, color);
-                ui.text(ImString::from(fps.to_string()));
-                token.pop(&ui);
-
-                menu_bar.end(&ui);
             }
         }
 
