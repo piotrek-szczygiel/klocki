@@ -3,7 +3,7 @@ use std::{env, fs, io, path::PathBuf};
 use crate::utils;
 
 use ggez::{conf::NumSamples, graphics::Image, Context, GameResult};
-use imgui::{self, im_str, ComboBox, ImStr, ImString, Slider, Ui};
+use imgui::{self, im_str, ComboBox, FontId, ImStr, ImString, Slider, Ui};
 use serde::{Deserialize, Serialize};
 use toml;
 
@@ -106,13 +106,16 @@ impl Settings {
         )
     }
 
-    pub fn draw(&mut self, state: &mut SettingsState, ui: &Ui) {
+    pub fn draw(&mut self, state: &mut SettingsState, ui: &Ui, bold: FontId) {
         let pos = 120.0;
-        let header_color = [0.0, 1.0, 1.0, 1.0];
+        let header_color = [0.6, 0.8, 1.0, 1.0];
 
         if let Some(menu) = ui.begin_menu(im_str!("Settings"), true) {
             ui.separator();
+
+            let id = ui.push_font(bold);
             ui.text_colored(header_color, im_str!("Graphics"));
+            id.pop(&ui);
             ui.separator();
 
             {
@@ -170,7 +173,9 @@ impl Settings {
             }
 
             ui.separator();
+            let id = ui.push_font(bold);
             ui.text_colored(header_color, im_str!("Gameplay"));
+            id.pop(&ui);
             ui.separator();
 
             {
@@ -205,7 +210,9 @@ impl Settings {
             }
 
             ui.separator();
+            let id = ui.push_font(bold);
             ui.text_colored(header_color, im_str!("Audio"));
+            id.pop(&ui);
             ui.separator();
 
             {

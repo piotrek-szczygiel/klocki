@@ -1,13 +1,16 @@
-use std::time::{Duration, Instant};
+use std::{
+    io::Read,
+    time::{Duration, Instant},
+};
 
 use gfx_core::{handle::RenderTargetView, memory::Typed};
 use gfx_device_gl;
-use ggez::{event, graphics, timer, Context};
+use ggez::{event, filesystem, graphics, timer, Context};
 
-use imgui::{self, im_str, ImString, StyleColor};
+use imgui::{self, im_str, FontId, FontSource, ImString, StyleColor};
 use imgui_gfx_renderer::{Renderer, Shaders};
 
-use crate::global::Global;
+use crate::{global::Global, utils};
 
 #[derive(Default)]
 struct MouseState {
@@ -31,14 +34,52 @@ pub struct ImGuiState {
 pub struct ImGuiWrapper {
     pub imgui: imgui::Context,
     pub renderer: Renderer<gfx_core::format::Rgba8, gfx_device_gl::Resources>,
+    regular_font: FontId,
+    bold_font: FontId,
     last_frame: Instant,
     mouse_state: MouseState,
     show_debug_window: bool,
 }
 
 impl ImGuiWrapper {
+    fn load_font(imgui: &mut imgui::Context, ctx: &mut Context) -> (FontId, FontId) {
+        let regular = filesystem::open(ctx, utils::path(ctx, "fonts/regular.ttf"));
+        let bold = filesystem::open(ctx, utils::path(ctx, "fonts/bold.ttf"));
+
+        let mut regular_font = None;
+        let mut bold_font = None;
+
+        if let (Ok(mut regular), Ok(mut bold)) = (regular, bold) {
+            let mut regular_bytes = vec![];
+            if regular.read_to_end(&mut regular_bytes).is_ok() {
+                regular_font = Some(imgui.fonts().add_font(&[FontSource::TtfData {
+                    data: &regular_bytes,
+                    size_pixels: 16.0,
+                    config: None,
+                }]));
+            }
+
+            let mut bold_bytes = vec![];
+            if bold.read_to_end(&mut bold_bytes).is_ok() {
+                bold_font = Some(imgui.fonts().add_font(&[FontSource::TtfData {
+                    data: &bold_bytes,
+                    size_pixels: 16.0,
+                    config: None,
+                }]));
+            }
+        }
+
+        if regular_font.is_none() || bold_font.is_none() {
+            log::error!("Unable to load fonts");
+        }
+
+        (regular_font.unwrap(), bold_font.unwrap())
+    }
+
     pub fn new(ctx: &mut Context) -> ImGuiWrapper {
         let mut imgui = imgui::Context::create();
+
+        let (regular_font, bold_font) = ImGuiWrapper::load_font(&mut imgui, ctx);
         let (factory, gfx_device, _, _, _) = graphics::gfx_objects(ctx);
 
         let shaders = {
@@ -58,11 +99,67 @@ impl ImGuiWrapper {
             }
         };
 
-        let renderer = Renderer::init(&mut imgui, &mut *factory, shaders).unwrap();
+        let mut renderer = Renderer::init(&mut imgui, &mut *factory, shaders).unwrap();
+        renderer
+            .reload_font_texture(&mut imgui, &mut *factory)
+            .expect("Failed to reload fonts");
+
+        let style = imgui.style_mut();
+        style.window_padding = [15.0, 15.0];
+        style.window_rounding = 5.0;
+        style.frame_padding = [5.0, 5.0];
+        style.frame_rounding = 4.0;
+        style.item_spacing = [12.0, 8.0];
+        style.item_inner_spacing = [8.0, 6.0];
+        style.indent_spacing = 25.0;
+        style.scrollbar_size = 15.0;
+        style.scrollbar_rounding = 9.0;
+        style.grab_min_size = 5.0;
+        style.grab_rounding = 3.0;
+
+        use imgui::StyleColor::*;
+        style[Text] = [0.80, 0.80, 0.83, 1.00];
+        style[TextDisabled] = [0.24, 0.23, 0.29, 1.00];
+        style[WindowBg] = [0.06, 0.05, 0.07, 1.00];
+        style[ChildBg] = [0.07, 0.07, 0.09, 1.00];
+        style[PopupBg] = [0.07, 0.07, 0.09, 1.00];
+        style[Border] = [0.80, 0.80, 0.83, 0.88];
+        style[BorderShadow] = [0.92, 0.91, 0.88, 0.00];
+        style[FrameBg] = [0.10, 0.09, 0.12, 1.00];
+        style[FrameBgHovered] = [0.24, 0.23, 0.29, 1.00];
+        style[FrameBgActive] = [0.56, 0.56, 0.58, 1.00];
+        style[TitleBg] = [0.10, 0.09, 0.12, 1.00];
+        style[TitleBgCollapsed] = [1.00, 0.98, 0.95, 0.75];
+        style[TitleBgActive] = [0.07, 0.07, 0.09, 1.00];
+        style[MenuBarBg] = [0.10, 0.09, 0.12, 1.00];
+        style[ScrollbarBg] = [0.10, 0.09, 0.12, 1.00];
+        style[ScrollbarGrab] = [0.80, 0.80, 0.83, 0.31];
+        style[ScrollbarGrabHovered] = [0.56, 0.56, 0.58, 1.00];
+        style[ScrollbarGrabActive] = [0.06, 0.05, 0.07, 1.00];
+        style[CheckMark] = [0.80, 0.80, 0.83, 0.31];
+        style[SliderGrab] = [0.80, 0.80, 0.83, 0.31];
+        style[SliderGrabActive] = [0.06, 0.05, 0.07, 1.00];
+        style[Button] = [0.10, 0.09, 0.12, 1.00];
+        style[ButtonHovered] = [0.24, 0.23, 0.29, 1.00];
+        style[ButtonActive] = [0.56, 0.56, 0.58, 1.00];
+        style[Header] = [0.10, 0.09, 0.12, 1.00];
+        style[HeaderHovered] = [0.56, 0.56, 0.58, 1.00];
+        style[HeaderActive] = [0.06, 0.05, 0.07, 1.00];
+        style[ResizeGrip] = [0.00, 0.00, 0.00, 0.00];
+        style[ResizeGripHovered] = [0.56, 0.56, 0.58, 1.00];
+        style[ResizeGripActive] = [0.06, 0.05, 0.07, 1.00];
+        style[PlotLines] = [0.40, 0.39, 0.38, 0.63];
+        style[PlotLinesHovered] = [0.25, 1.00, 0.00, 1.00];
+        style[PlotHistogram] = [0.40, 0.39, 0.38, 0.63];
+        style[PlotHistogramHovered] = [0.25, 1.00, 0.00, 1.00];
+        style[TextSelectedBg] = [0.25, 1.00, 0.00, 0.43];
+        style[ModalWindowDimBg] = [1.00, 0.98, 0.95, 0.73];
 
         ImGuiWrapper {
             imgui,
             renderer,
+            regular_font,
+            bold_font,
             last_frame: Instant::now(),
             mouse_state: MouseState::default(),
             show_debug_window: false,
@@ -97,9 +194,10 @@ impl ImGuiWrapper {
 
         let ui = self.imgui.frame();
         {
+            let font_id = ui.push_font(self.regular_font);
             if self.show_debug_window {
                 imgui::Window::new(im_str!("Debug"))
-                    .size([200.0, 200.0], imgui::Condition::Appearing)
+                    .size([300.0, 400.0], imgui::Condition::Appearing)
                     .position([50.0, 50.0], imgui::Condition::Appearing)
                     .build(&ui, || {
                         ui.text(im_str!("Debugging window"));
@@ -107,11 +205,12 @@ impl ImGuiWrapper {
 
                         ui.checkbox(im_str!("Paused"), &mut g.imgui_state.paused);
 
-                        g.imgui_state.restart = ui.small_button(im_str!("Restart"));
+                        g.imgui_state.restart = ui.button(im_str!("Restart"), [0.0, 0.0]);
 
-                        g.imgui_state.game_over = ui.small_button(im_str!("Game over"));
+                        g.imgui_state.game_over = ui.button(im_str!("Game over"), [0.0, 0.0]);
 
-                        g.imgui_state.debug_t_spin_tower = ui.small_button(im_str!("T-Spin tower"));
+                        g.imgui_state.debug_t_spin_tower =
+                            ui.button(im_str!("T-Spin tower"), [0.0, 0.0]);
 
                         ui.separator();
                         ui.text(im_str!("Window size: {}x{}", w, h));
@@ -139,13 +238,13 @@ impl ImGuiWrapper {
                         menu.end(&ui);
                     }
 
-                    g.settings.draw(&mut g.settings_state, &ui);
+                    g.settings.draw(&mut g.settings_state, &ui, self.bold_font);
 
                     ui.separator();
                     ui.text(im_str!("FPS:"));
 
                     let fps = timer::fps(ctx) as i32;
-                    let color = if fps > 55 {
+                    let color = if fps > 58 {
                         [0.0, 1.0, 0.0, 1.0]
                     } else {
                         [1.0, 0.0, 0.0, 1.0]
@@ -158,6 +257,8 @@ impl ImGuiWrapper {
                     menu_bar.end(&ui);
                 }
             }
+
+            font_id.pop(&ui);
         }
 
         let (factory, _, encoder, _, render_target) = graphics::gfx_objects(ctx);

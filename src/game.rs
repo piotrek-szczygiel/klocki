@@ -62,7 +62,7 @@ impl Game {
         let mut bag = Bag::new();
         let piece = Piece::new(bag.pop());
         let holder = Holder::new();
-        let font = Font::new(ctx, utils::path(ctx, "font.ttf"))?;
+        let font = Font::new(ctx, utils::path(ctx, "fonts/game.ttf"))?;
 
         let rect = graphics::screen_coordinates(ctx);
         let particle_animation = ParticleAnimation::new(130, 200.0, 80.0, rect.w, rect.h);

@@ -14,6 +14,7 @@ pub fn mouse_position_coords(ctx: &mut Context) -> Point2<f32> {
     Point2::new(pos.x * cw / w, pos.y * ch / h)
 }
 
+#[inline]
 pub fn dt_f32(ctx: &mut Context) -> f32 {
     timer::duration_to_f64(timer::delta(ctx)) as f32
 }
