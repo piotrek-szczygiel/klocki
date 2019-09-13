@@ -15,6 +15,7 @@ pub struct Settings {
     pub height: f32,
     pub fullscreen: bool,
     pub multi_sampling: NumSamples,
+    pub vsync: bool,
     pub block_size: i32,
     pub ghost_piece: bool,
     pub animated_background: bool,
@@ -49,6 +50,7 @@ impl Settings {
                 height: 720.0,
                 fullscreen: false,
                 multi_sampling: NumSamples::Zero,
+                vsync: true,
                 block_size: 32,
                 ghost_piece: true,
                 animated_background: true,
@@ -140,6 +142,14 @@ impl Settings {
                     ],
                 ) {
                     self.multi_sampling = SAMPLINGS[sampling_id];
+                    open_popup = true;
+                }
+                id.pop(&ui);
+
+                ui.text(im_str!("V-Sync"));
+                ui.same_line(pos);
+                let id = ui.push_id(im_str!("vsync"));
+                if ui.checkbox(im_str!(""), &mut self.vsync) {
                     open_popup = true;
                 }
                 id.pop(&ui);
