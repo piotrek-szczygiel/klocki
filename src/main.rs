@@ -12,7 +12,7 @@ mod settings;
 mod shape;
 mod utils;
 
-use std::time::Duration;
+use std::time::{Duration, Instant};
 
 use crate::{game::Game, global::Global, imgui_wrapper::ImGuiWrapper};
 
@@ -118,6 +118,8 @@ impl Application {
 
 impl EventHandler for Application {
     fn update(&mut self, ctx: &mut Context) -> GameResult<()> {
+        let start = Instant::now();
+
         let fullscreen = self.g.settings.fullscreen;
         if fullscreen != self.is_fullscreen && self.fullscreen_delay > Duration::from_millis(500) {
             self.is_fullscreen = fullscreen;
@@ -143,13 +145,19 @@ impl EventHandler for Application {
 
         self.game.update(ctx, &self.g)?;
 
+        self.g.imgui_state.update.push(start.elapsed());
         Ok(())
     }
 
     fn draw(&mut self, ctx: &mut Context) -> GameResult<()> {
+        let start = Instant::now();
+
         graphics::clear(ctx, graphics::WHITE);
         self.game.draw(ctx, &self.g)?;
         self.imgui_wrapper.draw(ctx, &mut self.g);
+
+        self.g.imgui_state.draw.push(start.elapsed());
+
         graphics::present(ctx)?;
         Ok(())
     }

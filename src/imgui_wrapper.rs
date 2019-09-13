@@ -1,4 +1,4 @@
-use std::time::Instant;
+use std::time::{Duration, Instant};
 
 use gfx_core::{handle::RenderTargetView, memory::Typed};
 use gfx_device_gl;
@@ -21,6 +21,10 @@ pub struct ImGuiState {
     pub restart: bool,
     pub paused: bool,
     pub debug_t_spin_tower: bool,
+    pub update_last: Duration,
+    pub draw_last: Duration,
+    pub update: Vec<Duration>,
+    pub draw: Vec<Duration>,
 }
 
 pub struct ImGuiWrapper {
@@ -67,6 +71,18 @@ impl ImGuiWrapper {
     pub fn draw(&mut self, ctx: &mut Context, g: &mut Global) {
         self.update_mouse();
 
+        const AVG_FRAMES: usize = 30;
+
+        if g.imgui_state.update.len() == AVG_FRAMES {
+            g.imgui_state.update_last = g.imgui_state.update.iter().sum();
+            g.imgui_state.update.clear();
+        }
+
+        if g.imgui_state.draw.len() == AVG_FRAMES {
+            g.imgui_state.draw_last = g.imgui_state.draw.iter().sum();
+            g.imgui_state.draw.clear();
+        }
+
         let now = Instant::now();
         let delta = now - self.last_frame;
         let delta_s = delta.as_secs() as f32 + delta.subsec_nanos() as f32 / 1_000_000_000.0;
@@ -93,6 +109,17 @@ impl ImGuiWrapper {
 
                         ui.separator();
                         ui.text(im_str!("Window size: {}x{}", w, h));
+
+                        ui.separator();
+                        ui.text(im_str!("Delta:  {:.1?}", timer::average_delta(ctx)));
+                        ui.text(im_str!(
+                            "Update: {:.1?}",
+                            g.imgui_state.update_last / AVG_FRAMES as u32
+                        ));
+                        ui.text(im_str!(
+                            "Draw:   {:.1?}",
+                            g.imgui_state.draw_last / AVG_FRAMES as u32
+                        ));
                     });
             }
 
