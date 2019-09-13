@@ -17,20 +17,33 @@ An arcade game written in [Rust](https://www.rust-lang.org) using the [ggez](htt
 
 Visit the [release](https://github.com/piotrek-szczygiel/klocki/releases) tab.
 
-## Music
+## Resources
 
-Music created by [Patrick de Arteaga](https://patrickdearteaga.com)
+Music created by [Patrick de Arteaga](https://patrickdearteaga.com).  
+Icon made by [Vitaly Gorbachev](https://www.flaticon.com/authors/vitaly-gorbachev) from [www.flaticon.com](https://www.flaticon.com).
 
-# Development
-## Running
+## Development
+
+Easiest way to obtain cargo is from [rustup.rs](https://rustup.rs).
 
 ```sh
-git clone https://github.com/piotrek-szczygiel/klocki && cd klocki
-cargo run --release
+git clone https://github.com/piotrek-szczygiel/klocki
+cd klocki
+
+cargo build             # debug
+cargo build --release   # release
+
+cargo run --release     # run release version
 ```
 
-## Linux dependencies
+## Debian dependencies
 
 ```sh
 sudo apt-get install libasound2-dev libudev-dev
+```
+
+## Arch dependencies
+
+```sh
+sudo pacman -S alsa-lib gcc-libs systemd-libs
 ```
