@@ -18,8 +18,9 @@ struct MouseState {
 
 #[derive(Default)]
 pub struct ImGuiState {
-    pub restart: bool,
     pub paused: bool,
+    pub restart: bool,
+    pub game_over: bool,
     pub debug_t_spin_tower: bool,
     pub update_last: Duration,
     pub draw_last: Duration,
@@ -103,8 +104,13 @@ impl ImGuiWrapper {
                     .build(&ui, || {
                         ui.text(im_str!("Debugging window"));
                         ui.separator();
-                        g.imgui_state.restart = ui.small_button(im_str!("Restart"));
+
                         ui.checkbox(im_str!("Paused"), &mut g.imgui_state.paused);
+
+                        g.imgui_state.restart = ui.small_button(im_str!("Restart"));
+
+                        g.imgui_state.game_over = ui.small_button(im_str!("Game over"));
+
                         g.imgui_state.debug_t_spin_tower = ui.small_button(im_str!("T-Spin tower"));
 
                         ui.separator();

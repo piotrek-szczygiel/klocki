@@ -105,11 +105,11 @@ impl Game {
 
     fn lock_piece(&mut self) {
         if !self.matrix.lock(&self.piece) {
-            self.game_over = true;
+            self.game_over();
         } else {
             self.piece = Piece::new(self.bag.pop());
             if self.matrix.collision(&self.piece) {
-                self.game_over = true;
+                self.game_over();
             } else {
                 self.reset_fall();
                 self.holder.unlock();
@@ -125,9 +125,18 @@ impl Game {
         }
     }
 
+    fn game_over(&mut self) {
+        self.game_over = true;
+        self.matrix.game_over();
+    }
+
     pub fn update(&mut self, ctx: &mut Context, g: &Global) -> GameResult<()> {
         if g.settings.animated_background {
             self.particle_animation.update(ctx)?;
+        }
+
+        if g.imgui_state.game_over {
+            self.game_over();
         }
 
         if g.imgui_state.debug_t_spin_tower {
@@ -296,19 +305,21 @@ impl Game {
         self.matrix
             .draw(ctx, position, &mut self.blocks, block_size)?;
 
-        self.piece
-            .draw(ctx, position, &mut self.blocks, block_size, 1.0)?;
+        if !self.game_over {
+            self.piece
+                .draw(ctx, position, &mut self.blocks, block_size, 1.0)?;
 
-        if g.settings.ghost_piece > 0.0 {
-            let mut ghost = self.piece.clone();
-            if ghost.fall(&self.matrix) >= ghost.grid().height {
-                ghost.draw(
-                    ctx,
-                    position,
-                    &mut self.blocks,
-                    block_size,
-                    g.settings.ghost_piece,
-                )?;
+            if g.settings.ghost_piece > 0.0 {
+                let mut ghost = self.piece.clone();
+                if ghost.fall(&self.matrix) >= ghost.grid().height {
+                    ghost.draw(
+                        ctx,
+                        position,
+                        &mut self.blocks,
+                        block_size,
+                        g.settings.ghost_piece,
+                    )?;
+                }
             }
         }
 

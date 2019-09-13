@@ -42,6 +42,5 @@ deploy:
     - "target/release/klocki-linux.deb"
     - "target/release/klocki-mac.zip"
   skip_cleanup: true
-  draft: true
   on:
     tags: true

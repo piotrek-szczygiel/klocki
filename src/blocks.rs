@@ -68,6 +68,20 @@ impl Blocks {
         }
     }
 
+    pub fn add_destroyed(&mut self, block_id: usize, size: i32, params: DrawParam) {
+        let scale = size as f32 / self.tileset_size as f32;
+        let scale = Vector2::new(scale, scale);
+
+        match block_id {
+            1..=BLOCKS_NUM => {
+                self.batch
+                    .add(params.src(self.rects[block_id - 1]).scale(scale));
+            }
+            0 => (),
+            _ => log::error!("Attempt to draw a non-existing block: {}", block_id),
+        }
+    }
+
     pub fn draw(&self, ctx: &mut Context) -> GameResult {
         graphics::draw(ctx, &self.batch, DrawParam::new())?;
 

@@ -1,13 +1,13 @@
-use std::time::Duration;
+use std::{collections::VecDeque, time::Duration};
 
-use crate::{blocks::Blocks, piece::Piece};
+use crate::{blocks::Blocks, piece::Piece, utils};
 
 use ggez::{
     graphics::{self, Color, DrawMode, DrawParam, Mesh, MeshBuilder, Rect},
-    nalgebra::Point2,
+    nalgebra::{Point2, Vector2},
     timer, Context, GameResult,
 };
-use rand_distr::{Distribution, Uniform};
+use rand_distr::{Distribution, Normal, Uniform};
 
 pub const WIDTH: i32 = 10;
 pub const HEIGHT: i32 = 20;
@@ -19,7 +19,16 @@ pub struct Matrix {
     grid: Grid,
     grid_mesh: Option<(Mesh, i32)>,
 
-    clearing: Option<(Vec<i32>, Duration)>,
+    clearing: Option<(VecDeque<i32>, Duration)>,
+    destroyed_blocks: Vec<DestroyedBlock>,
+}
+
+struct DestroyedBlock {
+    block_id: usize,
+    position: Vector2<f32>,
+    speed: Vector2<f32>,
+    rotation: f32,
+    rotation_speed: f32,
 }
 
 impl Matrix {
@@ -28,6 +37,7 @@ impl Matrix {
             grid: [[0; WIDTH as usize]; (HEIGHT + VANISH) as usize],
             grid_mesh: None,
             clearing: None,
+            destroyed_blocks: vec![],
         }
     }
 
@@ -99,16 +109,14 @@ impl Matrix {
     }
 
     pub fn lock(&mut self, piece: &Piece) -> bool {
-        if self.collision(&piece) {
-            return false;
-        }
+        let mut collision = self.collision(&piece);
 
         let grid = piece.grid();
         let x = piece.x + grid.offset_x;
         let y = piece.y + grid.offset_y;
 
         if y + grid.height <= VANISH {
-            return false;
+            collision = true;
         }
 
         for my in 0..grid.height {
@@ -120,8 +128,12 @@ impl Matrix {
             }
         }
 
-        self.clear_full_rows();
-        true
+        if !collision {
+            self.clear_full_rows();
+            true
+        } else {
+            false
+        }
     }
 
     pub fn blocked(&self) -> bool {
@@ -129,26 +141,35 @@ impl Matrix {
     }
 
     pub fn update(&mut self, ctx: &mut Context) {
-        let mut clear = false;
-        if let Some((_, duration)) = &mut self.clearing {
+        let mut clear = None;
+        if let Some((rows, duration)) = &mut self.clearing {
             *duration += timer::delta(ctx);
 
-            if *duration > Duration::from_millis(500) {
-                clear = true;
+            if rows.is_empty() {
+                self.clearing = None;
+            } else if *duration > Duration::from_millis(75) {
+                *duration = Duration::new(0, 0);
+                clear = rows.pop_front();
+
+                *rows = rows.iter().map(|row| row + 1).collect();
             }
         }
 
-        if clear {
-            let rows = self
-                .clearing
-                .as_ref()
-                .unwrap_or(&(vec![], Duration::new(0, 0)))
-                .0
-                .clone();
-
-            self.collapse_rows(&rows);
-            self.clearing = None;
+        if let Some(row) = clear {
+            self.collapse_row(row);
         }
+
+        let dt = utils::dt_f32(ctx);
+        let g = Vector2::new(0.0, 75.0) * dt;
+
+        for block in &mut self.destroyed_blocks {
+            block.speed += g;
+            block.position += block.speed * dt;
+            block.rotation += block.rotation_speed * dt;
+        }
+
+        self.destroyed_blocks
+            .retain(|block| block.position[1] < 60.0);
     }
 
     pub fn draw(
@@ -162,6 +183,8 @@ impl Matrix {
 
         blocks.clear();
 
+        let alpha = 0.6;
+
         for y in 0..=HEIGHT {
             for x in 0..WIDTH {
                 let block = self.grid[(VANISH + y - 1) as usize][x as usize];
@@ -174,11 +197,9 @@ impl Matrix {
                     position[1] + ((y - 1) * block_size) as f32,
                 );
 
-                blocks.add(block, block_size, dest, 0.6);
+                blocks.add(block, block_size, dest, alpha);
             }
         }
-
-        blocks.draw(ctx)?;
 
         graphics::draw(
             ctx,
@@ -186,22 +207,54 @@ impl Matrix {
             DrawParam::new().dest(position),
         )?;
 
+        for block in &self.destroyed_blocks {
+            blocks.add_destroyed(
+                block.block_id,
+                block_size,
+                DrawParam::new()
+                    .dest(position + block.position * block_size as f32)
+                    .rotation(block.rotation)
+                    .offset(Point2::new(0.5, 0.5))
+                    .color(Color::new(1.0, 1.0, 1.0, alpha)),
+            );
+        }
+
+        blocks.draw(ctx)?;
+
         Ok(())
+    }
+
+    fn generate_destroyed_block(
+        &mut self,
+        x: i32,
+        y: i32,
+        speed: Vector2<f32>,
+        rotation_speed: f32,
+    ) {
+        let block_id = self.grid[y as usize][x as usize];
+        if block_id != 0 {
+            self.destroyed_blocks.push(DestroyedBlock {
+                block_id,
+                position: Vector2::new(x as f32, (y - VANISH) as f32),
+                speed,
+                rotation: 0.0,
+                rotation_speed,
+            });
+        }
     }
 
     fn clear_full_rows(&mut self) {
         let rows = self.get_full_rows();
 
         if !rows.is_empty() {
-            self.erase_rows(&rows);
-            self.clearing = Some((rows, Duration::new(0, 0)));
+            self.clearing = Some((VecDeque::from(rows), Duration::new(0, 0)));
         }
     }
 
     fn get_full_rows(&self) -> Vec<i32> {
         let mut rows = vec![];
 
-        for y in 0..HEIGHT + VANISH {
+        for y in (0..HEIGHT + VANISH).rev() {
             let mut full = true;
 
             for x in 0..WIDTH {
@@ -219,22 +272,30 @@ impl Matrix {
         rows
     }
 
-    fn erase_rows(&mut self, rows: &[i32]) {
-        for &y in rows {
+    fn collapse_row(&mut self, row: i32) {
+        let mut rng = rand::thread_rng();
+
+        let uniform_vx = Uniform::new(-5.0, 5.0);
+        let normal_vy = Normal::new(-10.0, 5.0).unwrap();
+        let uniform_vr = Uniform::new(-4.0 * std::f32::consts::PI, 4.0 * std::f32::consts::PI);
+
+        for x in 0..WIDTH {
+            let vx = uniform_vx.sample(&mut rng);
+            let vy = normal_vy.sample(&mut rng);
+            let vr = uniform_vr.sample(&mut rng);
+            self.generate_destroyed_block(x, row, Vector2::new(vx, vy), vr);
+        }
+
+        for y in (1..=row).rev() {
             for x in 0..WIDTH {
-                self.grid[y as usize][x as usize] = 0;
+                self.grid[y as usize][x as usize] = self.grid[y as usize - 1][x as usize];
             }
         }
     }
 
-    fn collapse_rows(&mut self, rows: &[i32]) {
-        for &row in rows {
-            for y in (1..=row).rev() {
-                for x in 0..WIDTH {
-                    self.grid[y as usize][x as usize] = self.grid[y as usize - 1][x as usize];
-                }
-            }
-        }
+    pub fn game_over(&mut self) {
+        let rows: VecDeque<_> = (0..HEIGHT + VANISH).rev().collect();
+        self.clearing = Some((rows, Duration::new(0, 0)));
     }
 
     pub fn debug_tower(&mut self) {
