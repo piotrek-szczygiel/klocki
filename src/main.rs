@@ -28,6 +28,8 @@ use ggez::{
 };
 
 fn main() {
+    std::env::set_var("WINIT_UNIX_BACKEND", "x11");
+
     env_logger::builder()
         .default_format_timestamp(false)
         .filter_module("ggez", LevelFilter::Warn)
