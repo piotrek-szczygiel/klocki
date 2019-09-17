@@ -5,23 +5,18 @@ use crate::{
 };
 
 use ggez::{
+    graphics::{self, Color, DrawParam, Font, Scale, Text, TextFragment},
     nalgebra::{Point2, Vector2},
     Context, GameResult,
 };
 
+#[derive(Default)]
 pub struct Holder {
     shape: Option<Shape>,
     locked: bool,
 }
 
 impl Holder {
-    pub fn new() -> Holder {
-        Holder {
-            shape: None,
-            locked: false,
-        }
-    }
-
     pub fn hold(&mut self, shape_type: ShapeType, bag: &mut Bag) -> Option<ShapeType> {
         if self.locked {
             return None;
@@ -48,7 +43,24 @@ impl Holder {
         position: Point2<f32>,
         blocks: &mut Blocks,
         block_size: i32,
+        text_color: Color,
+        font: Font,
     ) -> GameResult {
+        let text = Text::new(TextFragment {
+            text: "hold".to_string(),
+            color: Some(text_color),
+            font: Some(font),
+            scale: Some(Scale::uniform(block_size as f32)),
+        });
+
+        graphics::draw(
+            ctx,
+            &text,
+            DrawParam::new().dest(position - Vector2::new(block_size as f32 * 1.3, 0.0)),
+        )?;
+
+        let position = position + Vector2::new(0.0, block_size as f32 * 2.0);
+
         if let Some(shape) = &self.shape {
             let position = position
                 + Vector2::new(-shape.grids[0].width as f32 * block_size as f32 / 2.0, 0.0);

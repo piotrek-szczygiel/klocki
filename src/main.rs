@@ -8,6 +8,7 @@ mod input;
 mod matrix;
 mod particles;
 mod piece;
+mod score;
 mod settings;
 mod shape;
 mod utils;

@@ -5,7 +5,7 @@ use crate::{
 };
 use ggez::{self, nalgebra::Point2, Context, GameResult};
 
-#[derive(Clone)]
+#[derive(Clone, PartialEq)]
 pub enum Movement {
     None,
     Shift,
@@ -33,6 +33,10 @@ impl Piece {
 
         piece.reset();
         piece
+    }
+
+    pub fn t_spin(&self) -> bool {
+        self.shape.shape_type == ShapeType::T && self.last_movement == Movement::Rotate
     }
 
     pub fn reset(&mut self) {

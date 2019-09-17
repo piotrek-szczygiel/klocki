@@ -9,9 +9,11 @@ use crate::{
 };
 
 use ggez::{
+    graphics::{self, Color, DrawParam, Font, Scale, Text, TextFragment},
     nalgebra::{Point2, Vector2},
     Context, GameResult,
 };
+
 use rand::{seq::SliceRandom, thread_rng};
 
 pub struct Bag {
@@ -44,7 +46,24 @@ impl Bag {
         position: Point2<f32>,
         blocks: &mut Blocks,
         block_size: i32,
+        text_color: Color,
+        font: Font,
     ) -> GameResult {
+        let text = Text::new(TextFragment {
+            text: "next".to_string(),
+            color: Some(text_color),
+            font: Some(font),
+            scale: Some(Scale::uniform(block_size as f32)),
+        });
+
+        graphics::draw(
+            ctx,
+            &text,
+            DrawParam::new().dest(position + Vector2::new(block_size as f32 * 0.7, 0.0)),
+        )?;
+
+        let position = position + Vector2::new(0.0, block_size as f32 * 2.0);
+
         for (i, &shape) in self.peek(6).enumerate() {
             let shape = Shape::new(shape);
             let position = position

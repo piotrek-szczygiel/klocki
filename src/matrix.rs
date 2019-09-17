@@ -31,6 +31,11 @@ struct DestroyedBlock {
     rotation_speed: f32,
 }
 
+pub enum Locked {
+    Collision,
+    Success(i32),
+}
+
 impl Matrix {
     pub fn new() -> Matrix {
         Matrix {
@@ -43,8 +48,20 @@ impl Matrix {
 
     pub fn build_grid(&mut self, ctx: &mut Context, block_size: i32) -> GameResult {
         let grid_mesh = &mut MeshBuilder::new();
-        let grid_color = Color::new(0.1, 0.1, 0.1, 1.0);
+        let grid_color = Color::new(0.5, 0.5, 0.5, 1.0);
         let outline_color = Color::new(0.2, 1.0, 0.8, 0.8);
+        let background_color = Color::new(0.03, 0.04, 0.05, 0.95);
+
+        grid_mesh.rectangle(
+            DrawMode::fill(),
+            Rect::new(
+                0.0,
+                0.0,
+                (WIDTH * block_size) as f32,
+                (HEIGHT * block_size) as f32,
+            ),
+            background_color,
+        );
 
         for y in VANISH..VANISH + HEIGHT {
             for x in 0..WIDTH {
@@ -108,7 +125,7 @@ impl Matrix {
         false
     }
 
-    pub fn lock(&mut self, piece: &Piece) -> bool {
+    pub fn lock(&mut self, piece: &Piece) -> Locked {
         let mut collision = self.collision(&piece);
 
         let grid = piece.grid();
@@ -129,10 +146,9 @@ impl Matrix {
         }
 
         if !collision {
-            self.clear_full_rows();
-            true
+            Locked::Success(self.clear_full_rows())
         } else {
-            false
+            Locked::Collision
         }
     }
 
@@ -243,12 +259,15 @@ impl Matrix {
         }
     }
 
-    fn clear_full_rows(&mut self) {
+    fn clear_full_rows(&mut self) -> i32 {
         let rows = self.get_full_rows();
+        let result = rows.len();
 
         if !rows.is_empty() {
             self.clearing = Some((VecDeque::from(rows), Duration::new(0, 0)));
         }
+
+        result as i32
     }
 
     fn get_full_rows(&self) -> Vec<i32> {

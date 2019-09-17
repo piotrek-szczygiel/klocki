@@ -6,16 +6,17 @@ use crate::{
     global::Global,
     holder::Holder,
     input::{Action, Input},
-    matrix::{self, Matrix},
+    matrix::{self, Locked, Matrix},
     particles::ParticleAnimation,
     piece::Piece,
+    score::Score,
     utils,
 };
 
 use ggez::{
     audio::{self, SoundSource},
     filesystem,
-    graphics::{self, Color, DrawParam, Font, Image, Scale, Text, TextFragment},
+    graphics::{self, Color, Font, Image, Scale},
     input::keyboard::KeyCode,
     nalgebra::{Point2, Vector2},
     timer, Context, GameResult,
@@ -29,6 +30,7 @@ pub struct Game {
     bag: Bag,
     piece: Piece,
     holder: Holder,
+    score: Score,
 
     game_over: bool,
     still: Duration,
@@ -52,8 +54,8 @@ impl Game {
             .bind(KeyCode::Up, Action::RotateClockwise, None)
             .bind(KeyCode::X, Action::RotateClockwise, None)
             .bind(KeyCode::Z, Action::RotateCounterClockwise, None)
-            .bind(KeyCode::Space, Action::HardFall, None)
-            .bind(KeyCode::LShift, Action::SoftFall, None)
+            .bind(KeyCode::Space, Action::HardDrop, None)
+            .bind(KeyCode::LShift, Action::SoftDrop, None)
             .bind(KeyCode::C, Action::HoldPiece, None)
             .exclude(KeyCode::Right, KeyCode::Left)
             .exclude(KeyCode::Left, KeyCode::Right);
@@ -61,7 +63,9 @@ impl Game {
         let matrix = Matrix::new();
         let mut bag = Bag::new();
         let piece = Piece::new(bag.pop());
-        let holder = Holder::new();
+        let holder = Holder::default();
+        let score = Score::default();
+
         let font = Font::new(ctx, utils::path(ctx, "fonts/game.ttf"))?;
 
         let rect = graphics::screen_coordinates(ctx);
@@ -92,6 +96,7 @@ impl Game {
             bag,
             piece,
             holder,
+            score,
             game_over: false,
             still: Duration::new(0, 0),
             fall_interval: Duration::from_secs(1),
@@ -104,15 +109,24 @@ impl Game {
     }
 
     fn lock_piece(&mut self) {
-        if !self.matrix.lock(&self.piece) {
-            self.game_over();
-        } else {
-            self.piece = Piece::new(self.bag.pop());
-            if self.matrix.collision(&self.piece) {
+        match self.matrix.lock(&self.piece) {
+            Locked::Collision => {
                 self.game_over();
-            } else {
-                self.reset_fall();
-                self.holder.unlock();
+            }
+            Locked::Success(rows) => {
+                if rows > 0 {
+                    self.score.lock(rows, self.piece.t_spin());
+                } else {
+                    self.score.reset_combo();
+                }
+
+                self.piece = Piece::new(self.bag.pop());
+                if self.matrix.collision(&self.piece) {
+                    self.game_over();
+                } else {
+                    self.reset_fall();
+                    self.holder.unlock();
+                }
             }
         }
     }
@@ -193,14 +207,16 @@ impl Game {
                         self.reset_fall();
                     }
                 }
-                Action::SoftFall => {
+                Action::SoftDrop => {
                     let rows = self.piece.fall(&self.matrix);
                     if rows > 0 {
                         self.reset_fall();
+                        self.score.soft_drop(rows);
                     }
                 }
-                Action::HardFall => {
-                    self.piece.fall(&self.matrix);
+                Action::HardDrop => {
+                    let rows = self.piece.fall(&self.matrix);
+                    self.score.hard_drop(rows);
                     self.lock_piece();
                 }
                 Action::HoldPiece => {
@@ -251,55 +267,38 @@ impl Game {
         );
 
         let ui_block_size = ((block_size * 3) as f32 / 4.0) as i32;
-
-        let hold_text = Text::new(TextFragment {
-            text: "hold".to_string(),
-            color: Some(Color::new(0.8, 0.9, 1.0, 0.8)),
-            font: Some(self.font),
-            scale: Some(Scale::uniform(block_size as f32)),
-        });
-
-        graphics::draw(
-            ctx,
-            &hold_text,
-            DrawParam::new().dest(position - Vector2::new(ui_block_size as f32 * 4.5, 0.0)),
-        )?;
+        let ui_color = Color::new(0.8, 0.9, 1.0, 0.8);
+        let ui_font = self.font;
+        let ui_scale = Scale::uniform(ui_block_size as f32);
 
         self.holder.draw(
             ctx,
-            position + Vector2::new(-3.25 * ui_block_size as f32, ui_block_size as f32 * 2.0),
+            position + Vector2::new(-3.25 * ui_block_size as f32, 0.0),
             &mut self.blocks,
             ui_block_size,
-        )?;
-
-        let next_text = Text::new(TextFragment {
-            text: "next".to_string(),
-            color: Some(Color::new(0.8, 0.9, 1.0, 0.8)),
-            font: Some(self.font),
-            scale: Some(Scale::uniform(block_size as f32)),
-        });
-
-        graphics::draw(
-            ctx,
-            &next_text,
-            DrawParam::new().dest(
-                position
-                    + Vector2::new(
-                        ((matrix::WIDTH) * block_size) as f32 + ui_block_size as f32 * 2.1,
-                        0.0,
-                    ),
-            ),
+            ui_color,
+            ui_font,
         )?;
 
         self.bag.draw(
             ctx,
-            position
-                + Vector2::new(
-                    ((matrix::WIDTH + 1) * block_size) as f32,
-                    ui_block_size as f32 * 2.0,
-                ),
+            position + Vector2::new(((matrix::WIDTH + 1) * block_size) as f32, 0.0),
             &mut self.blocks,
             ui_block_size,
+            ui_color,
+            ui_font,
+        )?;
+
+        self.score.draw(
+            ctx,
+            position
+                + Vector2::new(
+                    block_size as f32 * (matrix::WIDTH + 1) as f32,
+                    block_size as f32 * (matrix::HEIGHT - 2) as f32,
+                ),
+            ui_color,
+            ui_font,
+            ui_scale,
         )?;
 
         self.matrix

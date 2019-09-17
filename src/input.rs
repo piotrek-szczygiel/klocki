@@ -14,8 +14,8 @@ pub enum Action {
     MoveDown,
     RotateClockwise,
     RotateCounterClockwise,
-    HardFall,
-    SoftFall,
+    HardDrop,
+    SoftDrop,
     HoldPiece,
 }
 
