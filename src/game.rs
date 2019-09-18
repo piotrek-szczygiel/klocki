@@ -1,7 +1,12 @@
 use std::time::{Duration, Instant};
 
 use crate::{
-    gameplay::Gameplay, global::Global, imgui_wrapper::ImGuiWrapper, particles::ParticleAnimation,
+    gameplay::Gameplay,
+    global::Global,
+    imgui_wrapper::ImGuiWrapper,
+    input::{Action, Input},
+    matrix,
+    particles::ParticleAnimation,
     utils,
 };
 
@@ -14,8 +19,11 @@ use ggez::{
     timer, Context, GameResult,
 };
 
+use rand::{thread_rng, RngCore};
+
 pub struct Game {
     pub g: Global,
+    input: Input,
     gameplay: Gameplay,
     background: Image,
     particle_animation: ParticleAnimation,
@@ -28,6 +36,25 @@ pub struct Game {
 
 impl Game {
     pub fn new(ctx: &mut Context, mut g: Global) -> GameResult<Game> {
+        let repeat = Some((150, 50));
+        let mut input = Input::new();
+        input
+            .bind(KeyCode::Right, Action::MoveRight, repeat)
+            .bind(KeyCode::Left, Action::MoveLeft, repeat)
+            .bind(KeyCode::Down, Action::MoveDown, repeat)
+            .bind(KeyCode::Up, Action::RotateClockwise, None)
+            .bind(KeyCode::X, Action::RotateClockwise, None)
+            .bind(KeyCode::Z, Action::RotateCounterClockwise, None)
+            .bind(KeyCode::Space, Action::HardDrop, None)
+            .bind(KeyCode::LShift, Action::SoftDrop, None)
+            .bind(KeyCode::C, Action::HoldPiece, None)
+            .exclude(KeyCode::Right, KeyCode::Left)
+            .exclude(KeyCode::Left, KeyCode::Right);
+
+        let mut seed = [0u8; 32];
+        thread_rng().fill_bytes(&mut seed);
+        let gameplay = Gameplay::new(ctx, &mut g, &seed)?;
+
         let rect = graphics::screen_coordinates(ctx);
         let particle_animation = ParticleAnimation::new(130, 200.0, 80.0, rect.w, rect.h);
 
@@ -37,8 +64,9 @@ impl Game {
         music.play()?;
 
         let mut app = Game {
-            gameplay: Gameplay::new(ctx, &mut g)?,
             g,
+            input,
+            gameplay,
             background: Image::new(ctx, utils::path(ctx, "background.jpg"))?,
             particle_animation,
             music,
@@ -73,7 +101,10 @@ impl EventHandler for Game {
         }
 
         if self.g.imgui_state.restart {
-            self.gameplay = Gameplay::new(ctx, &mut self.g)?;
+            println!("{:?}", self.gameplay.actions_history);
+            let mut seed = [0u8; 32];
+            thread_rng().fill_bytes(&mut seed);
+            self.gameplay = Gameplay::new(ctx, &mut self.g, &seed)?;
         }
 
         if self.g.settings_state.restart {
@@ -87,6 +118,9 @@ impl EventHandler for Game {
         if (self.music.volume() - self.g.settings.music_volume).abs() > 0.01 {
             self.music.set_volume(self.g.settings.music_volume);
         }
+
+        self.input.update(ctx);
+        self.gameplay.actions(self.input.actions());
 
         self.gameplay.update(ctx, &self.g)?;
         if self.gameplay.explosion() {
@@ -120,7 +154,13 @@ impl EventHandler for Game {
 
         self.particle_animation.draw(ctx)?;
 
-        self.gameplay.draw(ctx, &self.g)?;
+        let coords = graphics::screen_coordinates(ctx);
+        let position_center = Point2::new(
+            (coords.w - (matrix::WIDTH * self.g.settings.block_size) as f32) / 2.0,
+            (coords.h - (matrix::HEIGHT * self.g.settings.block_size) as f32) / 2.0,
+        );
+
+        self.gameplay.draw(ctx, &self.g, position_center)?;
         self.imgui_wrapper.draw(ctx, &mut self.g);
 
         self.g.imgui_state.draw.push(start.elapsed());

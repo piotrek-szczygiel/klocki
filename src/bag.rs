@@ -22,8 +22,8 @@ pub struct Bag {
 }
 
 impl Bag {
-    pub fn new(seed: [u8; 32]) -> Bag {
-        let rng: StdRng = SeedableRng::from_seed(seed);
+    pub fn new(seed: &[u8; 32]) -> Bag {
+        let rng: StdRng = SeedableRng::from_seed(*seed);
 
         let mut bag = Bag {
             bag: VecDeque::with_capacity(14),

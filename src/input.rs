@@ -1,5 +1,5 @@
 use std::{
-    collections::{HashMap, VecDeque},
+    collections::{vec_deque::Drain, HashMap, VecDeque},
     time::Duration,
 };
 
@@ -7,7 +7,7 @@ use ggez::{self, input::keyboard::KeyCode, timer, Context};
 
 const MAX_KEYCODES: usize = 161;
 
-#[derive(Copy, Clone)]
+#[derive(Debug, Copy, Clone)]
 pub enum Action {
     MoveRight,
     MoveLeft,
@@ -164,7 +164,7 @@ impl Input {
         }
     }
 
-    pub fn actions(&mut self) -> VecDeque<Action> {
-        self.actions.drain(..).collect()
+    pub fn actions(&mut self) -> Drain<Action> {
+        self.actions.drain(..)
     }
 }
