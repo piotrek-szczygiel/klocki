@@ -101,7 +101,8 @@ impl Bag {
 
 #[test]
 fn bag_test() {
-    let mut bag = Bag::new();
+    let seed = [0; 32];
+    let mut bag = Bag::new(&seed);
     assert_eq!(14, bag.peek(14).len());
 
     for _ in 0..7 {
