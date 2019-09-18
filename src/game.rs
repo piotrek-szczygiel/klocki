@@ -38,7 +38,7 @@ pub struct Game {
 
     font: Font,
     blocks: Blocks,
-    particle_animation: ParticleAnimation,
+    pub particle_animation: ParticleAnimation,
     background: Image,
     music: audio::Source,
 }
@@ -116,6 +116,7 @@ impl Game {
             Locked::Success(rows) => {
                 if rows > 0 {
                     self.score.lock(rows, self.piece.t_spin());
+                    self.particle_animation.explosion(Point2::new(960.0, 540.0));
                 } else {
                     self.score.reset_combo();
                 }
@@ -142,6 +143,7 @@ impl Game {
     fn game_over(&mut self) {
         self.game_over = true;
         self.matrix.game_over();
+        self.particle_animation.explosion(Point2::new(960.0, 540.0));
     }
 
     pub fn update(&mut self, ctx: &mut Context, g: &Global) -> GameResult<()> {

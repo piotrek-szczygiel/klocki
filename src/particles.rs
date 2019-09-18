@@ -8,7 +8,7 @@ use ggez::{
 
 use crate::utils;
 
-const MOUSE_THRESHOLD: f32 = 200.0;
+const MOUSE_THRESHOLD: f32 = 100.0;
 
 struct Particle {
     position: Point2<f32>,
@@ -87,6 +87,7 @@ pub struct ParticleAnimation {
     max_speed: f32,
     width: f32,
     height: f32,
+    explosion: Option<Point2<f32>>,
 }
 
 impl ParticleAnimation {
@@ -103,7 +104,12 @@ impl ParticleAnimation {
             max_speed,
             width,
             height,
+            explosion: None,
         }
+    }
+
+    pub fn explosion(&mut self, position: Point2<f32>) {
+        self.explosion = Some(position);
     }
 
     pub fn update(&mut self, ctx: &mut Context) -> GameResult<()> {
@@ -118,19 +124,42 @@ impl ParticleAnimation {
             let speed = dt * self.max_speed;
             particle.position += particle.speed * speed;
 
-            if particle.position[0] > self.width - particle.size
-                || particle.position[0] < particle.size
-            {
+            if particle.position[0] < particle.size {
+                particle.position[0] = particle.size;
+                particle.speed[0] = -particle.speed[0];
+            } else if particle.position[0] > self.width - particle.size {
+                particle.position[0] = self.width - particle.size;
                 particle.speed[0] = -particle.speed[0];
             }
 
-            if particle.position[1] > self.height - particle.size
-                || particle.position[1] < particle.size
-            {
+            if particle.position[1] < particle.size {
+                particle.position[1] = particle.size;
+                particle.speed[1] = -particle.speed[1];
+            } else if particle.position[1] > self.height - particle.size {
+                particle.position[1] = self.height - particle.size;
                 particle.speed[1] = -particle.speed[1];
             }
 
-            let distance = if timer::time_since_start(ctx).as_millis() < 2000 {
+            if let Some(explosion) = self.explosion {
+                let mut direction = Vector2::new(0.0, 0.0);
+
+                if particle.position[0] < explosion[0] {
+                    direction[0] = -1.0;
+                } else {
+                    direction[0] = 1.0;
+                }
+
+                if particle.position[1] < explosion[1] {
+                    direction[1] = -1.0;
+                } else {
+                    direction[1] = 1.0;
+                }
+
+                particle.speed[0] += direction[0] * particle.speed[0].abs() * 20.0;
+                particle.speed[1] += direction[1] * particle.speed[1].abs() * 20.0;
+            }
+
+            let distance = if timer::time_since_start(ctx).as_millis() < 1000 {
                 MOUSE_THRESHOLD
             } else {
                 nalgebra::distance(&pos, &particle.position)
@@ -155,15 +184,17 @@ impl ParticleAnimation {
                     direction * dt * (MOUSE_THRESHOLD - distance).powf(2.0) / MOUSE_THRESHOLD;
             } else {
                 if particle.speed[0].abs() > particle.starting_speed[0] {
-                    particle.speed[0] -=
-                        particle.speed[0].signum() * dt * particle.starting_speed[0] * 10.0;
+                    particle.speed[0] -= particle.speed[0] * dt;
                 }
 
                 if particle.speed[1].abs() > particle.starting_speed[1] {
-                    particle.speed[1] -=
-                        particle.speed[1].signum() * dt * particle.starting_speed[1] * 10.0;
+                    particle.speed[1] -= particle.speed[1] * dt;
                 }
             }
+        }
+
+        if self.explosion.is_some() {
+            self.explosion = None;
         }
 
         Ok(())
