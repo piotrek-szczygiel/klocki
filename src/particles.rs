@@ -108,7 +108,7 @@ impl ParticleAnimation {
         }
     }
 
-    pub fn explosion(&mut self, position: Point2<f32>) {
+    pub fn explode(&mut self, position: Point2<f32>) {
         self.explosion = Some(position);
     }
 

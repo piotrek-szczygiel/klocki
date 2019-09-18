@@ -17,6 +17,10 @@ pub enum Action {
     HardDrop,
     SoftDrop,
     HoldPiece,
+
+    FallPiece,
+    LockPiece,
+    GameOver,
 }
 
 pub struct Repeat {
@@ -160,7 +164,7 @@ impl Input {
         }
     }
 
-    pub fn action(&mut self) -> Option<Action> {
-        self.actions.pop_front()
+    pub fn actions(&mut self) -> VecDeque<Action> {
+        self.actions.drain(..).collect()
     }
 }
