@@ -155,8 +155,8 @@ impl ParticleAnimation {
                     direction[1] = 1.0;
                 }
 
-                particle.speed[0] += direction[0] * particle.speed[0].abs() * 20.0;
-                particle.speed[1] += direction[1] * particle.speed[1].abs() * 20.0;
+                particle.speed[0] += direction[0] * particle.speed[0].abs() * 10.0;
+                particle.speed[1] += direction[1] * particle.speed[1].abs() * 10.0;
             }
 
             let distance = if timer::time_since_start(ctx).as_millis() < 1000 {

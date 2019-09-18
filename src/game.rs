@@ -21,7 +21,10 @@ use ggez::{
     nalgebra::{Point2, Vector2},
     timer, Context, GameResult,
 };
+
 use imgui::ImString;
+
+use rand::{thread_rng, RngCore};
 
 pub struct Game {
     input: Input,
@@ -61,7 +64,11 @@ impl Game {
             .exclude(KeyCode::Left, KeyCode::Right);
 
         let matrix = Matrix::new();
-        let mut bag = Bag::new();
+
+        let mut seed = [0u8; 32];
+        thread_rng().fill_bytes(&mut seed);
+
+        let mut bag = Bag::new(seed);
         let piece = Piece::new(bag.pop());
         let holder = Holder::default();
         let score = Score::default();

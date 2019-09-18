@@ -14,16 +14,20 @@ use ggez::{
     Context, GameResult,
 };
 
-use rand::{seq::SliceRandom, thread_rng};
+use rand::{rngs::StdRng, seq::SliceRandom, SeedableRng};
 
 pub struct Bag {
     bag: VecDeque<ShapeType>,
+    rng: StdRng,
 }
 
 impl Bag {
-    pub fn new() -> Bag {
+    pub fn new(seed: [u8; 32]) -> Bag {
+        let rng: StdRng = SeedableRng::from_seed(seed);
+
         let mut bag = Bag {
             bag: VecDeque::with_capacity(14),
+            rng,
         };
 
         bag.fill();
@@ -90,7 +94,7 @@ impl Bag {
 
     fn fill_7(&mut self) {
         let mut shapes = shape::all_shape_types();
-        shapes.shuffle(&mut thread_rng());
+        shapes.shuffle(&mut self.rng);
         self.bag.extend(shapes);
     }
 }
