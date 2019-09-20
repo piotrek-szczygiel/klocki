@@ -6,8 +6,7 @@ use std::{
 use gfx_core::{handle::RenderTargetView, memory::Typed};
 use gfx_device_gl;
 use ggez::{event, filesystem, graphics, timer, Context};
-
-use imgui::{self, im_str, FontId, FontSource, ImString, StyleColor};
+use imgui::{self, im_str, FontId, FontSource, ImString, StyleColor, Window};
 use imgui_gfx_renderer::{Renderer, Shaders};
 
 use crate::{global::Global, utils};
@@ -29,6 +28,9 @@ pub struct ImGuiState {
     pub draw_last: Duration,
     pub update: Vec<Duration>,
     pub draw: Vec<Duration>,
+    pub game_over_window: bool,
+    pub save_replay: bool,
+    pub replay_score: i32,
 }
 
 pub struct ImGuiWrapper {
@@ -196,9 +198,9 @@ impl ImGuiWrapper {
         {
             let font_id = ui.push_font(self.regular_font);
             if self.show_debug_window {
-                imgui::Window::new(im_str!("Debug"))
-                    .size([300.0, 400.0], imgui::Condition::Appearing)
-                    .position([50.0, 50.0], imgui::Condition::Appearing)
+                Window::new(im_str!("Debug"))
+                    // .size([300.0, 400.0], Condition::Appearing)
+                    // .position([50.0, 50.0], Condition::Appearing)
                     .build(&ui, || {
                         ui.text(im_str!("Debugging window"));
                         ui.separator();
@@ -226,6 +228,29 @@ impl ImGuiWrapper {
                             g.imgui_state.draw_last / AVG_FRAMES as u32
                         ));
                     });
+            }
+
+            if g.imgui_state.game_over_window {
+                let mut opened = true;
+                Window::new(im_str!("Game over"))
+                    .opened(&mut opened)
+                    .resizable(false)
+                    .collapsible(false)
+                    .build(&ui, || {
+                        ui.text(im_str!("Score: {}", g.imgui_state.replay_score));
+                        ui.separator();
+
+                        g.imgui_state.save_replay = ui.button(im_str!("Save replay"), [0.0, 0.0]);
+
+                        ui.separator();
+                        if g.imgui_state.save_replay || ui.button(im_str!("Close"), [0.0, 0.0]) {
+                            g.imgui_state.game_over_window = false;
+                        }
+                    });
+
+                if !opened {
+                    g.imgui_state.game_over_window = false;
+                }
             }
 
             if !g.settings.hide_menu {

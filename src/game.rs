@@ -1,15 +1,11 @@
-use std::time::{Duration, Instant};
-
-use crate::{
-    gameplay::Gameplay,
-    global::Global,
-    imgui_wrapper::ImGuiWrapper,
-    input::{Action, Input},
-    matrix,
-    particles::ParticleAnimation,
-    utils,
+use std::{
+    env, fs,
+    path::PathBuf,
+    time::{Duration, Instant},
 };
 
+use chrono::Utc;
+use dirs;
 use ggez::{
     audio::{self, SoundSource},
     event::{self, EventHandler, KeyMods, MouseButton},
@@ -18,13 +14,25 @@ use ggez::{
     nalgebra::{Point2, Vector2},
     timer, Context, GameResult,
 };
-
 use rand::{thread_rng, RngCore};
+
+use crate::{
+    action::Action,
+    gameplay::Gameplay,
+    global::Global,
+    imgui_wrapper::ImGuiWrapper,
+    input::Input,
+    matrix,
+    particles::ParticleAnimation,
+    replay::{Replay, ReplayData},
+    utils,
+};
 
 pub struct Game {
     pub g: Global,
     input: Input,
     gameplay: Gameplay,
+    game_over: bool,
     background: Image,
     particle_animation: ParticleAnimation,
     music: audio::Source,
@@ -32,6 +40,8 @@ pub struct Game {
     imgui_wrapper: ImGuiWrapper,
     is_fullscreen: bool,
     fullscreen_delay: Duration,
+
+    replay: Option<Replay>,
 }
 
 impl Game {
@@ -51,28 +61,43 @@ impl Game {
             .exclude(KeyCode::Right, KeyCode::Left)
             .exclude(KeyCode::Left, KeyCode::Right);
 
+        let mut replay = None;
+        if let Some(path) = env::args().nth(1) {
+            let path = PathBuf::from(path);
+            if path.is_file() {
+                if let Some(replay_data) = ReplayData::load(&path) {
+                    if let Ok(r) = Replay::new(ctx, &mut g, replay_data) {
+                        replay = Some(r);
+                    }
+                }
+            }
+        }
+
         let mut seed = [0u8; 32];
         thread_rng().fill_bytes(&mut seed);
-        let gameplay = Gameplay::new(ctx, &mut g, &seed)?;
+
+        let gameplay = Gameplay::new(ctx, &mut g, true, &seed)?;
 
         let rect = graphics::screen_coordinates(ctx);
         let particle_animation = ParticleAnimation::new(130, 200.0, 80.0, rect.w, rect.h);
 
         let mut music = audio::Source::new(ctx, utils::path(ctx, "chiptronical.ogg"))?;
         music.set_repeat(true);
-        music.set_volume(0.2);
+        music.set_volume(g.settings.music_volume);
         music.play()?;
 
         let mut app = Game {
             g,
             input,
             gameplay,
+            game_over: false,
             background: Image::new(ctx, utils::path(ctx, "background.jpg"))?,
             particle_animation,
             music,
             imgui_wrapper: ImGuiWrapper::new(ctx),
             is_fullscreen: false,
             fullscreen_delay: Duration::new(0, 0),
+            replay,
         };
 
         app.resize_event(ctx, app.g.settings.width, app.g.settings.height);
@@ -101,10 +126,11 @@ impl EventHandler for Game {
         }
 
         if self.g.imgui_state.restart {
-            println!("{:?}", self.gameplay.actions_history);
             let mut seed = [0u8; 32];
             thread_rng().fill_bytes(&mut seed);
-            self.gameplay = Gameplay::new(ctx, &mut self.g, &seed)?;
+
+            self.gameplay = Gameplay::new(ctx, &mut self.g, true, &seed)?;
+            self.game_over = false;
         }
 
         if self.g.settings_state.restart {
@@ -119,12 +145,51 @@ impl EventHandler for Game {
             self.music.set_volume(self.g.settings.music_volume);
         }
 
-        self.input.update(ctx);
-        self.gameplay.actions(self.input.actions());
+        let mut gameplay = &mut self.gameplay;
 
-        self.gameplay.update(ctx, &self.g)?;
-        if self.gameplay.explosion() {
+        match &mut self.replay {
+            Some(replay) => {
+                replay.update(ctx);
+                gameplay = &mut replay.gameplay;
+            }
+            None => {
+                self.input.update(ctx);
+                gameplay.actions(&self.input.actions());
+            }
+        }
+
+        gameplay.update(ctx, &self.g)?;
+
+        if gameplay.explosion() {
             self.particle_animation.explode(Point2::new(960.0, 540.0));
+        }
+
+        if self.replay.is_none() {
+            if self.gameplay.game_over() && !self.game_over {
+                self.game_over = true;
+                self.g.imgui_state.game_over_window = true;
+                self.g.imgui_state.replay_score = self.gameplay.score();
+            }
+
+            if self.g.imgui_state.save_replay {
+                self.g.imgui_state.save_replay = false;
+                let mut path = dirs::data_local_dir().unwrap_or_default();
+                path.push("klocki");
+                path.push("replays");
+
+                if let Err(e) = fs::create_dir_all(&path) {
+                    log::error!("Unable to create replay directory: {:?}", e);
+                } else {
+                    path.push(format!(
+                        "Score {} - {}.klocki",
+                        self.gameplay.score(),
+                        Utc::now().format("%Y%m%d_%H%M%S"),
+                    ));
+
+                    self.gameplay.replay_data().save(&path);
+                    ReplayData::load(&path).unwrap();
+                }
+            }
         }
 
         self.g.imgui_state.update.push(start.elapsed());
@@ -160,7 +225,14 @@ impl EventHandler for Game {
             (coords.h - (matrix::HEIGHT * self.g.settings.block_size) as f32) / 2.0,
         );
 
-        self.gameplay.draw(ctx, &self.g, position_center)?;
+        let gameplay = if let Some(replay) = &mut self.replay {
+            &mut replay.gameplay
+        } else {
+            &mut self.gameplay
+        };
+
+        gameplay.draw(ctx, &self.g, position_center)?;
+
         self.imgui_wrapper.draw(ctx, &mut self.g);
 
         self.g.imgui_state.draw.push(start.elapsed());
@@ -208,7 +280,7 @@ impl EventHandler for Game {
             KeyCode::Escape => event::quit(ctx),
             KeyCode::LAlt => self.g.settings.hide_menu ^= true,
             _ => (),
-        }
+        };
     }
 
     fn resize_event(&mut self, ctx: &mut Context, width: f32, height: f32) {

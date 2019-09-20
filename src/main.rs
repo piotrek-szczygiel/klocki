@@ -1,3 +1,4 @@
+mod action;
 mod bag;
 mod blocks;
 mod game;
@@ -9,20 +10,21 @@ mod input;
 mod matrix;
 mod particles;
 mod piece;
+mod replay;
 mod score;
 mod settings;
 mod shape;
 mod utils;
 
-use crate::{game::Game, global::Global};
-use std::ffi::OsStr;
+use std::{ffi::OsStr, panic, thread};
 
+use backtrace::Backtrace;
 use env_logger;
+use ggez::{conf, event, filesystem, graphics, ContextBuilder, GameResult};
+use imgui::ImString;
 use log::{self, LevelFilter};
 
-use ggez::{conf, event, filesystem, graphics, ContextBuilder, GameResult};
-
-use imgui::ImString;
+use crate::{game::Game, global::Global};
 
 fn main() {
     std::env::set_var("WINIT_UNIX_BACKEND", "x11");
@@ -32,6 +34,35 @@ fn main() {
         .filter_module("ggez", LevelFilter::Warn)
         .filter_module("klocki", LevelFilter::Trace)
         .init();
+
+    panic::set_hook(Box::new(|info| {
+        let backtrace = Backtrace::new();
+
+        let thread = thread::current();
+        let thread = thread.name().unwrap_or("unnamed");
+
+        let msg = match info.payload().downcast_ref::<&'static str>() {
+            Some(s) => *s,
+            None => match info.payload().downcast_ref::<String>() {
+                Some(s) => &**s,
+                None => "Box<Any>",
+            },
+        };
+
+        match info.location() {
+            Some(location) => {
+                log::error!(
+                    "thread '{}' panicked at '{}': {}:{}\n{:?}",
+                    thread,
+                    msg,
+                    location.file(),
+                    location.line(),
+                    backtrace
+                );
+            }
+            None => log::error!("thread '{}' panicked at '{}'\n{:?}", thread, msg, backtrace),
+        }
+    }));
 
     if let Some(err) = real_main().err() {
         log::error!("{}", err);
@@ -84,20 +115,25 @@ fn real_main() -> GameResult {
         g.settings_state.skins = filesystem::read_dir(ctx, utils::path(ctx, "blocks"))?
             .filter(|p| p.extension().unwrap_or_else(|| OsStr::new("")) == "png")
             .collect();
+        g.settings_state.skins.sort();
+
         g.settings_state.skins_imstr = g
             .settings_state
             .skins
             .iter()
             .map(|s| ImString::from(String::from(s.file_name().unwrap().to_str().unwrap())))
             .collect();
+        g.settings_state.skins_imstr.sort();
 
         let game = &mut Game::new(ctx, g)?;
 
         log::info!("Starting the event loop");
-        event::run(ctx, event_loop, game)?;
 
-        log::info!("Saving the settings");
-        game.g.settings.save().expect("Unable to save settings");
+        if let Err(e) = event::run(ctx, event_loop, game) {
+            log::error!("Error while running event loop: {:?}", e);
+        }
+
+        game.g.settings.save();
 
         if !game.g.settings_state.restart {
             break Ok(());

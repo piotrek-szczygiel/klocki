@@ -1,27 +1,10 @@
-use std::{
-    collections::{vec_deque::Drain, HashMap, VecDeque},
-    time::Duration,
-};
+use std::{collections::HashMap, time::Duration};
 
 use ggez::{self, input::keyboard::KeyCode, timer, Context};
 
+use crate::action::Action;
+
 const MAX_KEYCODES: usize = 161;
-
-#[derive(Debug, Copy, Clone)]
-pub enum Action {
-    MoveRight,
-    MoveLeft,
-    MoveDown,
-    RotateClockwise,
-    RotateCounterClockwise,
-    HardDrop,
-    SoftDrop,
-    HoldPiece,
-
-    FallPiece,
-    LockPiece,
-    GameOver,
-}
 
 pub struct Repeat {
     delay: Duration,
@@ -37,7 +20,7 @@ pub struct Input {
     key_activated: Vec<Option<Duration>>,
     key_repeated: Vec<Option<Duration>>,
     key_binds: HashMap<KeyCode, KeyBind>,
-    actions: VecDeque<Action>,
+    actions: Vec<Action>,
     exclusions: HashMap<KeyCode, Vec<KeyCode>>,
 }
 
@@ -55,7 +38,7 @@ impl Input {
             key_activated,
             key_repeated,
             key_binds: HashMap::new(),
-            actions: VecDeque::new(),
+            actions: vec![],
             exclusions: HashMap::new(),
         }
     }
@@ -164,7 +147,7 @@ impl Input {
         }
     }
 
-    pub fn actions(&mut self) -> Drain<Action> {
-        self.actions.drain(..)
+    pub fn actions(&mut self) -> Vec<Action> {
+        self.actions.drain(..).collect()
     }
 }

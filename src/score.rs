@@ -12,6 +12,10 @@ pub struct Score {
 }
 
 impl Score {
+    pub fn score(&self) -> i32 {
+        self.score
+    }
+
     pub fn soft_drop(&mut self, rows: i32) {
         self.score += rows;
     }

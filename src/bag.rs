@@ -3,18 +3,17 @@ use std::{
     iter::Take,
 };
 
-use crate::{
-    blocks::Blocks,
-    shape::{self, Shape, ShapeType},
-};
-
 use ggez::{
     graphics::{self, Color, DrawParam, Font, Scale, Text, TextFragment},
     nalgebra::{Point2, Vector2},
     Context, GameResult,
 };
-
 use rand::{rngs::StdRng, seq::SliceRandom, SeedableRng};
+
+use crate::{
+    blocks::Blocks,
+    shape::{self, Shape, ShapeType},
+};
 
 pub struct Bag {
     bag: VecDeque<ShapeType>,

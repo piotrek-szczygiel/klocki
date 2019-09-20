@@ -1,19 +1,4 @@
-use std::{
-    collections::{vec_deque::Drain, VecDeque},
-    time::Duration,
-};
-
-use crate::{
-    bag::Bag,
-    blocks::Blocks,
-    global::Global,
-    holder::Holder,
-    input::Action,
-    matrix::{self, Locked, Matrix},
-    piece::Piece,
-    score::Score,
-    utils,
-};
+use std::{collections::VecDeque, time::Duration};
 
 use ggez::{
     graphics::{Color, Font, Scale},
@@ -21,9 +6,25 @@ use ggez::{
     timer, Context, GameResult,
 };
 
+use crate::{
+    action::Action,
+    bag::Bag,
+    blocks::Blocks,
+    global::Global,
+    holder::Holder,
+    matrix::{self, Locked, Matrix},
+    piece::Piece,
+    replay::ReplayData,
+    score::Score,
+    utils,
+};
+
 pub struct Gameplay {
+    interactive: bool,
+    action_duration: Duration,
+
     actions: VecDeque<Action>,
-    pub actions_history: VecDeque<Action>,
+    replay: ReplayData,
 
     matrix: Matrix,
     bag: Bag,
@@ -42,9 +43,14 @@ pub struct Gameplay {
 }
 
 impl Gameplay {
-    pub fn new(ctx: &mut Context, g: &mut Global, seed: &[u8; 32]) -> GameResult<Gameplay> {
+    pub fn new(
+        ctx: &mut Context,
+        g: &mut Global,
+        interactive: bool,
+        seed: &[u8; 32],
+    ) -> GameResult<Gameplay> {
         let actions = VecDeque::new();
-        let actions_history = VecDeque::new();
+        let replay = ReplayData::new(seed);
 
         let matrix = Matrix::new();
 
@@ -58,8 +64,10 @@ impl Gameplay {
         let blocks = Blocks::new(g.settings.tileset(ctx, &g.settings_state)?);
 
         Ok(Gameplay {
+            interactive,
+            action_duration: Duration::new(0, 0),
             actions,
-            actions_history,
+            replay,
             matrix,
             bag,
             piece,
@@ -82,12 +90,20 @@ impl Gameplay {
         }
     }
 
-    fn explode(&mut self) {
+    pub fn explode(&mut self) {
         self.explosion = true;
     }
 
-    pub fn actions(&mut self, actions: Drain<Action>) {
-        self.actions.extend(actions);
+    pub fn action(&mut self, action: Action) {
+        self.actions.push_back(action);
+        self.replay.add(action, self.action_duration);
+        self.action_duration = Duration::new(0, 0);
+    }
+
+    pub fn actions(&mut self, actions: &[Action]) {
+        for &action in actions {
+            self.action(action);
+        }
     }
 
     pub fn explosion(&mut self) -> bool {
@@ -96,9 +112,21 @@ impl Gameplay {
         result
     }
 
+    pub fn replay_data(&self) -> &ReplayData {
+        &self.replay
+    }
+
+    pub fn score(&self) -> i32 {
+        self.score.score()
+    }
+
+    pub fn game_over(&self) -> bool {
+        self.game_over
+    }
+
     pub fn update(&mut self, ctx: &mut Context, g: &Global) -> GameResult<()> {
         if g.imgui_state.game_over {
-            self.actions.push_back(Action::GameOver);
+            self.action(Action::GameOver);
         }
 
         if g.imgui_state.debug_t_spin_tower {
@@ -114,8 +142,10 @@ impl Gameplay {
             return Ok(());
         }
 
+        self.action_duration += timer::delta(ctx);
+
         while let Some(action) = self.actions.pop_front() {
-            self.actions_history.push_back(action);
+            // self.actions_history.push(action);
 
             match action {
                 Action::MoveRight => {
@@ -161,7 +191,10 @@ impl Gameplay {
                 Action::HardDrop => {
                     let rows = self.piece.fall(&self.matrix);
                     self.score.hard_drop(rows);
-                    self.actions.push_back(Action::LockPiece);
+
+                    if self.interactive {
+                        self.action(Action::LockPiece);
+                    }
                 }
                 Action::HoldPiece => {
                     if let Some(shape) = self.holder.hold(self.piece.shape(), &mut self.bag) {
@@ -169,14 +202,16 @@ impl Gameplay {
                     }
                 }
                 Action::FallPiece => {
-                    if !self.piece.shift(0, 1, &self.matrix) {
-                        self.actions.push_back(Action::LockPiece);
+                    if !self.piece.shift(0, 1, &self.matrix) && self.interactive {
+                        self.action(Action::LockPiece);
                     }
                 }
                 Action::LockPiece => {
                     match self.matrix.lock(&self.piece) {
                         Locked::Collision => {
-                            self.actions.push_back(Action::GameOver);
+                            if self.interactive {
+                                self.action(Action::GameOver);
+                            }
                         }
                         Locked::Success(rows) => {
                             if rows > 0 {
@@ -187,11 +222,15 @@ impl Gameplay {
                             }
 
                             self.piece = Piece::new(self.bag.pop());
-                            if self.matrix.collision(&self.piece) {
-                                self.actions.push_back(Action::GameOver);
+                            if self.matrix.collision(&self.piece) && self.interactive {
+                                self.action(Action::GameOver);
                             } else {
                                 self.reset_fall();
                                 self.holder.unlock();
+                            }
+
+                            if self.matrix.blocked() {
+                                break;
                             }
                         }
                     };
@@ -204,12 +243,14 @@ impl Gameplay {
             };
         }
 
-        self.still += timer::delta(ctx);
+        if self.interactive {
+            self.still += timer::delta(ctx);
 
-        if self.still >= self.fall_interval {
-            self.still -= self.fall_interval;
+            if self.still >= self.fall_interval {
+                self.still -= self.fall_interval;
 
-            self.actions.push_back(Action::FallPiece);
+                self.action(Action::FallPiece);
+            }
         }
 
         Ok(())

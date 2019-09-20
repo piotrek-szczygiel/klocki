@@ -1,13 +1,13 @@
-use crate::{
-    bag::Bag,
-    blocks::Blocks,
-    shape::{Shape, ShapeType},
-};
-
 use ggez::{
     graphics::{self, Color, DrawParam, Font, Scale, Text, TextFragment},
     nalgebra::{Point2, Vector2},
     Context, GameResult,
+};
+
+use crate::{
+    bag::Bag,
+    blocks::Blocks,
+    shape::{Shape, ShapeType},
 };
 
 #[derive(Default)]

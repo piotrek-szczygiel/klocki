@@ -1,9 +1,10 @@
+use ggez::{self, nalgebra::Point2, Context, GameResult};
+
 use crate::{
     blocks::Blocks,
     matrix::{self, Matrix},
     shape::{Shape, ShapeGrid, ShapeType},
 };
-use ggez::{self, nalgebra::Point2, Context, GameResult};
 
 #[derive(Clone, PartialEq)]
 pub enum Movement {

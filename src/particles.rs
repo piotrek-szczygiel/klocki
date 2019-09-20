@@ -1,14 +1,11 @@
-use rand_distr::{Distribution, Normal, Uniform};
-
 use ggez::{
     graphics::{self, Color, DrawMode, DrawParam, MeshBuilder},
     nalgebra::{self, Point2, Vector2},
     timer, Context, GameResult,
 };
+use rand_distr::{Distribution, Normal, Uniform};
 
 use crate::utils;
-
-const MOUSE_THRESHOLD: f32 = 100.0;
 
 struct Particle {
     position: Point2<f32>,
@@ -43,16 +40,6 @@ impl Particle {
 
         let normal_size = Normal::new(2.0, 0.5).unwrap();
         let uniform_color = Normal::new(0.5, 0.2).unwrap();
-
-        fn clamp(source: f32, min: f32, max: f32) -> f32 {
-            if source < min {
-                min
-            } else if source > max {
-                max
-            } else {
-                source
-            }
-        }
 
         for _ in 0..n {
             let direction = if uniform_direction.sample(&mut rng) == 0 {
@@ -155,9 +142,11 @@ impl ParticleAnimation {
                     direction[1] = 1.0;
                 }
 
-                particle.speed[0] += direction[0] * particle.speed[0].abs() * 10.0;
-                particle.speed[1] += direction[1] * particle.speed[1].abs() * 10.0;
+                particle.speed[0] += direction[0] * particle.starting_speed[0] * 20.0;
+                particle.speed[1] += direction[1] * particle.starting_speed[1] * 20.0;
             }
+
+            const MOUSE_THRESHOLD: f32 = 200.0;
 
             let distance = if timer::time_since_start(ctx).as_millis() < 1000 {
                 MOUSE_THRESHOLD
@@ -184,13 +173,17 @@ impl ParticleAnimation {
                     direction * dt * (MOUSE_THRESHOLD - distance).powf(2.0) / MOUSE_THRESHOLD;
             } else {
                 if particle.speed[0].abs() > particle.starting_speed[0] {
-                    particle.speed[0] -= particle.speed[0] * dt;
+                    particle.speed[0] -= particle.speed[0] / 2.0 * dt;
                 }
 
                 if particle.speed[1].abs() > particle.starting_speed[1] {
-                    particle.speed[1] -= particle.speed[1] * dt;
+                    particle.speed[1] -= particle.speed[1] / 2.0 * dt;
                 }
             }
+
+            const MAX_SPEED: f32 = 75.0;
+            clamp_mut(&mut particle.speed[0], -MAX_SPEED, MAX_SPEED);
+            clamp_mut(&mut particle.speed[1], -MAX_SPEED, MAX_SPEED);
         }
 
         if self.explosion.is_some() {
@@ -241,4 +234,18 @@ impl ParticleAnimation {
 
         Ok(())
     }
+}
+
+fn clamp(source: f32, min: f32, max: f32) -> f32 {
+    if source < min {
+        min
+    } else if source > max {
+        max
+    } else {
+        source
+    }
+}
+
+fn clamp_mut(source: &mut f32, min: f32, max: f32) {
+    *source = clamp(*source, min, max);
 }

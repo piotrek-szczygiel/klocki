@@ -1,13 +1,13 @@
 use std::{collections::VecDeque, time::Duration};
 
-use crate::{blocks::Blocks, piece::Piece, utils};
-
 use ggez::{
     graphics::{self, Color, DrawMode, DrawParam, Mesh, MeshBuilder, Rect},
     nalgebra::{Point2, Vector2},
     timer, Context, GameResult,
 };
 use rand_distr::{Distribution, Normal, Uniform};
+
+use crate::{blocks::Blocks, piece::Piece, utils};
 
 pub const WIDTH: i32 = 10;
 pub const HEIGHT: i32 = 20;

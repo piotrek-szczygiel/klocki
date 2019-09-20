@@ -1,13 +1,12 @@
-use std::{env, fs, io, path::PathBuf};
+use std::{fs, path::PathBuf};
 
-use crate::utils;
-
+use dirs;
 use ggez::{conf::NumSamples, graphics::Image, Context, GameResult};
 use imgui::{self, im_str, ComboBox, FontId, ImStr, ImString, Slider, Ui};
 use serde::{Deserialize, Serialize};
 use toml;
 
-const CONFIG_FILENAME: &str = "config.toml";
+use crate::utils;
 
 #[derive(Serialize, Deserialize)]
 pub struct Settings {
@@ -43,7 +42,7 @@ static SAMPLINGS: [NumSamples; 6] = [
 
 impl Settings {
     pub fn new() -> Settings {
-        if let Some(settings) = Settings::load(CONFIG_FILENAME) {
+        if let Some(settings) = Settings::load() {
             settings
         } else {
             Settings {
@@ -62,32 +61,26 @@ impl Settings {
         }
     }
 
-    pub fn save(&self) -> io::Result<()> {
-        if let Ok(toml) = toml::to_string_pretty(self) {
-            let mut path = env::current_exe()?;
-            path.pop();
-            path.push(CONFIG_FILENAME);
-            fs::write(path, toml)?;
-            log::info!("Config saved successfully");
-            Ok(())
-        } else {
-            Err(io::Error::from(io::ErrorKind::InvalidData))
-        }
+    fn path() -> PathBuf {
+        let mut path = dirs::data_local_dir().unwrap_or_default();
+        path.push("klocki");
+        path.push("config.toml");
+        path
     }
 
-    fn load(filename: &str) -> Option<Settings> {
-        let path = env::current_exe();
-        if path.is_err() {
-            log::error!("Unable to get executable directory");
-            return None;
-        }
+    pub fn save(&self) {
+        let toml = toml::to_string_pretty(self).unwrap();
+        let path = Settings::path();
+        fs::write(&path, toml).unwrap_or_else(|e| panic!("Unable to save settings: {:?}", e));
+        log::info!("Saved settings to: {:?}", &path);
+    }
 
-        let mut path = path.unwrap();
-        path.pop();
-        path.push(filename);
+    fn load() -> Option<Settings> {
+        let path = Settings::path();
 
-        if let Ok(contents) = fs::read_to_string(path) {
+        if let Ok(contents) = fs::read_to_string(&path) {
             if let Ok(settings) = toml::from_str(&contents) {
+                log::info!("Loaded settings from: {:?}", &path);
                 return Some(settings);
             } else {
                 log::error!("Error while reading config file");
@@ -222,6 +215,11 @@ impl Settings {
                 Slider::new(im_str!(""), 0.0..=1.0)
                     .display_format(im_str!("%.2f"))
                     .build(&ui, &mut self.music_volume);
+
+                if self.music_volume < 0.01 {
+                    self.music_volume = 0.0;
+                }
+
                 id.pop(&ui);
             }
 

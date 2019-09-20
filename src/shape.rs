@@ -1,6 +1,6 @@
-use crate::blocks::Blocks;
-
 use ggez::{nalgebra::Point2, Context, GameResult};
+
+use crate::blocks::Blocks;
 
 pub type Kick = [(i32, i32); 4];
 pub type Kicks = [(Kick, Kick); 4];
