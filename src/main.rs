@@ -13,6 +13,7 @@ mod piece;
 mod replay;
 mod score;
 mod settings;
+mod sfx;
 mod shape;
 mod utils;
 
@@ -24,7 +25,7 @@ use ggez::{conf, event, filesystem, graphics, ContextBuilder, GameResult};
 use imgui::ImString;
 use log::{self, LevelFilter};
 
-use crate::{game::Game, global::Global};
+use crate::{game::Game, global::Global, sfx::Sfx};
 
 fn main() {
     std::env::set_var("WINIT_UNIX_BACKEND", "x11");
@@ -124,6 +125,8 @@ fn real_main() -> GameResult {
             .map(|s| ImString::from(String::from(s.file_name().unwrap().to_str().unwrap())))
             .collect();
         g.settings_state.skins_imstr.sort();
+
+        g.sfx = Sfx::load(ctx, g.settings.sfx_volume)?;
 
         let game = &mut Game::new(ctx, g)?;
 

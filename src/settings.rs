@@ -21,6 +21,7 @@ pub struct Settings {
     pub animated_background: bool,
     pub skin_id: usize,
     pub music_volume: f32,
+    pub sfx_volume: f32,
 }
 
 #[derive(Default)]
@@ -57,6 +58,7 @@ impl Settings {
                 animated_background: true,
                 skin_id: 0,
                 music_volume: 0.2,
+                sfx_volume: 0.1,
             }
         }
     }
@@ -215,12 +217,23 @@ impl Settings {
                 Slider::new(im_str!(""), 0.0..=1.0)
                     .display_format(im_str!("%.2f"))
                     .build(&ui, &mut self.music_volume);
+                id.pop(&ui);
 
                 if self.music_volume < 0.01 {
                     self.music_volume = 0.0;
                 }
 
+                ui.text(im_str!("SFX Volume"));
+                ui.same_line(pos);
+                let id = ui.push_id(im_str!("sfx_volume"));
+                Slider::new(im_str!(""), 0.0..=1.0)
+                    .display_format(im_str!("%.2f"))
+                    .build(&ui, &mut self.sfx_volume);
                 id.pop(&ui);
+
+                if self.sfx_volume < 0.01 {
+                    self.music_volume = 0.0;
+                }
             }
 
             ui.popup_modal(im_str!("Restart needed")).build(|| {

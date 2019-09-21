@@ -1,4 +1,4 @@
-<p align="center"><a href="https://github.com/piotrek-szczygiel/klocki"><img src="resources/logo.png" alt="Logo"></a></p>
+<p align="center"><a href="https://github.com/piotrek-szczygiel/klocki"><img src="./logo.png" alt="Logo"></a></p>
 <h1 align="center">Klocki</h1>
 <p align="center">
     <img src="https://travis-ci.org/piotrek-szczygiel/klocki.svg?branch=master">
@@ -27,7 +27,6 @@ Visit the [release](https://github.com/piotrek-szczygiel/klocki/releases) tab.
 
 Music created by [Patrick de Arteaga](https://patrickdearteaga.com).  
 Icon made by [Vitaly Gorbachev](https://www.flaticon.com/authors/vitaly-gorbachev) from [www.flaticon.com](https://www.flaticon.com).  
-Some assets taken from [NullpoMino](https://github.com/nullpomino/nullpomino) project.
 
 ## Development
 

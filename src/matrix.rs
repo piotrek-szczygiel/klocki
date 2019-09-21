@@ -7,7 +7,7 @@ use ggez::{
 };
 use rand_distr::{Distribution, Normal, Uniform};
 
-use crate::{blocks::Blocks, piece::Piece, utils};
+use crate::{blocks::Blocks, global::Global, piece::Piece, utils};
 
 pub const WIDTH: i32 = 10;
 pub const HEIGHT: i32 = 20;
@@ -21,6 +21,7 @@ pub struct Matrix {
 
     clearing: Option<(VecDeque<i32>, Duration)>,
     destroyed_blocks: Vec<DestroyedBlock>,
+    game_over: bool,
 }
 
 struct DestroyedBlock {
@@ -43,6 +44,7 @@ impl Matrix {
             grid_mesh: None,
             clearing: None,
             destroyed_blocks: vec![],
+            game_over: false,
         }
     }
 
@@ -156,7 +158,7 @@ impl Matrix {
         self.clearing.is_some()
     }
 
-    pub fn update(&mut self, ctx: &mut Context) {
+    pub fn update(&mut self, ctx: &mut Context, g: &mut Global, sfx: bool) {
         let mut clear = None;
         if let Some((rows, duration)) = &mut self.clearing {
             *duration += timer::delta(ctx);
@@ -166,6 +168,10 @@ impl Matrix {
             } else if *duration > Duration::from_millis(75) {
                 *duration = Duration::new(0, 0);
                 clear = rows.pop_front();
+
+                if sfx && !self.game_over {
+                    g.sfx.play("linefall");
+                }
 
                 *rows = rows.iter().map(|row| row + 1).collect();
             }
@@ -313,8 +319,18 @@ impl Matrix {
     }
 
     pub fn game_over(&mut self) {
-        let rows: VecDeque<_> = (0..HEIGHT + VANISH).rev().collect();
-        self.clearing = Some((rows, Duration::new(0, 0)));
+        let mut rows = vec![];
+        for y in (0..HEIGHT + VANISH).rev() {
+            for x in 0..WIDTH {
+                if self.grid[y as usize][x as usize] != 0 {
+                    rows.push(y);
+                    break;
+                }
+            }
+        }
+
+        self.clearing = Some((VecDeque::from(rows), Duration::new(0, 0)));
+        self.game_over = true;
     }
 
     pub fn debug_tower(&mut self) {

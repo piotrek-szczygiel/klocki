@@ -145,6 +145,10 @@ impl EventHandler for Game {
             self.music.set_volume(self.g.settings.music_volume);
         }
 
+        if (self.g.sfx.volume() - self.g.settings.sfx_volume).abs() > 0.01 {
+            self.g.sfx.set_volume(self.g.settings.sfx_volume);
+        }
+
         let mut gameplay = &mut self.gameplay;
 
         match &mut self.replay {
@@ -158,7 +162,7 @@ impl EventHandler for Game {
             }
         }
 
-        gameplay.update(ctx, &self.g)?;
+        gameplay.update(ctx, &mut self.g, true)?;
 
         if gameplay.explosion() {
             self.particle_animation.explode(Point2::new(960.0, 540.0));

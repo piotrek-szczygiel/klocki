@@ -124,7 +124,130 @@ impl Gameplay {
         self.game_over
     }
 
-    pub fn update(&mut self, ctx: &mut Context, g: &Global) -> GameResult<()> {
+    fn process_action(&mut self, g: &mut Global, action: Action, sfx: bool) -> bool {
+        match action {
+            Action::MoveRight => {
+                if self.piece.shift(1, 0, &self.matrix) && self.piece.touching_floor(&self.matrix) {
+                    self.reset_fall();
+                }
+            }
+            Action::MoveLeft => {
+                if self.piece.shift(-1, 0, &self.matrix) && self.piece.touching_floor(&self.matrix)
+                {
+                    self.reset_fall();
+                }
+            }
+            Action::MoveDown => {
+                if self.piece.shift(0, 1, &self.matrix) {
+                    self.reset_fall();
+                }
+            }
+            Action::RotateClockwise => {
+                if self.piece.rotate(true, &self.matrix) && self.piece.touching_floor(&self.matrix)
+                {
+                    self.reset_fall();
+                }
+            }
+            Action::RotateCounterClockwise => {
+                if self.piece.rotate(false, &self.matrix) && self.piece.touching_floor(&self.matrix)
+                {
+                    self.reset_fall();
+                }
+            }
+            Action::SoftDrop => {
+                let rows = self.piece.fall(&self.matrix);
+                if rows > 0 {
+                    self.reset_fall();
+                    self.score.soft_drop(rows);
+                }
+            }
+            Action::HardDrop => {
+                let rows = self.piece.fall(&self.matrix);
+                self.score.hard_drop(rows);
+
+                if self.interactive {
+                    self.action(Action::LockPiece);
+                }
+            }
+            Action::HoldPiece => {
+                if let Some(shape) = self.holder.hold(self.piece.shape(), &mut self.bag) {
+                    self.piece = Piece::new(shape);
+                    if sfx {
+                        g.sfx.play("hold");
+                    }
+                } else if sfx {
+                    g.sfx.play("holdfail");
+                }
+            }
+            Action::FallPiece => {
+                if !self.piece.shift(0, 1, &self.matrix) && self.interactive {
+                    self.action(Action::LockPiece);
+                }
+            }
+            Action::LockPiece => {
+                match self.matrix.lock(&self.piece) {
+                    Locked::Collision => {
+                        if self.interactive {
+                            self.action(Action::GameOver);
+                        }
+                    }
+                    Locked::Success(rows) => {
+                        if rows > 0 {
+                            self.explode();
+                            self.score.lock(rows, self.piece.t_spin());
+                        } else {
+                            self.score.reset_combo();
+                        }
+
+                        if sfx {
+                            match (rows, self.piece.t_spin()) {
+                                (1, false) => g.sfx.play("erase1"),
+                                (2, false) => g.sfx.play("erase2"),
+                                (3, false) => g.sfx.play("erase3"),
+                                (4, false) => g.sfx.play("erase4"),
+                                (0, true) => g.sfx.play("tspin0"),
+                                (1, true) => g.sfx.play("tspin1"),
+                                (2, true) => g.sfx.play("tspin2"),
+                                (3, true) => g.sfx.play("tspin3"),
+                                _ => g.sfx.play("lock"),
+                            }
+                        }
+
+                        self.piece = Piece::new(self.bag.pop());
+                        if self.matrix.collision(&self.piece) && self.interactive {
+                            self.action(Action::GameOver);
+                        } else {
+                            self.reset_fall();
+                            self.holder.unlock();
+                        }
+
+                        if self.matrix.blocked() {
+                            return false;
+                        }
+                    }
+                };
+            }
+            Action::GameOver => {
+                self.game_over = true;
+                self.matrix.game_over();
+                self.explode();
+            }
+        };
+
+        if sfx {
+            match action {
+                Action::MoveDown | Action::MoveLeft | Action::MoveRight => g.sfx.play("move"),
+                Action::RotateClockwise | Action::RotateCounterClockwise => g.sfx.play("rotate"),
+                Action::SoftDrop => g.sfx.play("softdrop"),
+                Action::HardDrop => g.sfx.play("harddrop"),
+                _ => (),
+            }
+        }
+
+        true
+    }
+
+    pub fn update(&mut self, ctx: &mut Context, g: &mut Global, sfx: bool) -> GameResult<()> {
         if g.imgui_state.game_over {
             self.action(Action::GameOver);
         }
@@ -137,7 +260,7 @@ impl Gameplay {
             self.blocks = Blocks::new(g.settings.tileset(ctx, &g.settings_state)?);
         }
 
-        self.matrix.update(ctx);
+        self.matrix.update(ctx, g, sfx);
         if self.game_over || self.matrix.blocked() || g.imgui_state.paused {
             return Ok(());
         }
@@ -147,100 +270,9 @@ impl Gameplay {
         while let Some(action) = self.actions.pop_front() {
             // self.actions_history.push(action);
 
-            match action {
-                Action::MoveRight => {
-                    if self.piece.shift(1, 0, &self.matrix)
-                        && self.piece.touching_floor(&self.matrix)
-                    {
-                        self.reset_fall();
-                    }
-                }
-                Action::MoveLeft => {
-                    if self.piece.shift(-1, 0, &self.matrix)
-                        && self.piece.touching_floor(&self.matrix)
-                    {
-                        self.reset_fall();
-                    }
-                }
-                Action::MoveDown => {
-                    if self.piece.shift(0, 1, &self.matrix) {
-                        self.reset_fall();
-                    }
-                }
-                Action::RotateClockwise => {
-                    if self.piece.rotate(true, &self.matrix)
-                        && self.piece.touching_floor(&self.matrix)
-                    {
-                        self.reset_fall();
-                    }
-                }
-                Action::RotateCounterClockwise => {
-                    if self.piece.rotate(false, &self.matrix)
-                        && self.piece.touching_floor(&self.matrix)
-                    {
-                        self.reset_fall();
-                    }
-                }
-                Action::SoftDrop => {
-                    let rows = self.piece.fall(&self.matrix);
-                    if rows > 0 {
-                        self.reset_fall();
-                        self.score.soft_drop(rows);
-                    }
-                }
-                Action::HardDrop => {
-                    let rows = self.piece.fall(&self.matrix);
-                    self.score.hard_drop(rows);
-
-                    if self.interactive {
-                        self.action(Action::LockPiece);
-                    }
-                }
-                Action::HoldPiece => {
-                    if let Some(shape) = self.holder.hold(self.piece.shape(), &mut self.bag) {
-                        self.piece = Piece::new(shape);
-                    }
-                }
-                Action::FallPiece => {
-                    if !self.piece.shift(0, 1, &self.matrix) && self.interactive {
-                        self.action(Action::LockPiece);
-                    }
-                }
-                Action::LockPiece => {
-                    match self.matrix.lock(&self.piece) {
-                        Locked::Collision => {
-                            if self.interactive {
-                                self.action(Action::GameOver);
-                            }
-                        }
-                        Locked::Success(rows) => {
-                            if rows > 0 {
-                                self.explode();
-                                self.score.lock(rows, self.piece.t_spin());
-                            } else {
-                                self.score.reset_combo();
-                            }
-
-                            self.piece = Piece::new(self.bag.pop());
-                            if self.matrix.collision(&self.piece) && self.interactive {
-                                self.action(Action::GameOver);
-                            } else {
-                                self.reset_fall();
-                                self.holder.unlock();
-                            }
-
-                            if self.matrix.blocked() {
-                                break;
-                            }
-                        }
-                    };
-                }
-                Action::GameOver => {
-                    self.game_over = true;
-                    self.matrix.game_over();
-                    self.explode();
-                }
-            };
+            if !self.process_action(g, action, sfx) {
+                break;
+            }
         }
 
         if self.interactive {
