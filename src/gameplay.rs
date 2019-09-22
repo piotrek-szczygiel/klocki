@@ -126,49 +126,6 @@ impl Gameplay {
 
     fn process_action(&mut self, g: &mut Global, action: Action, sfx: bool) -> bool {
         match action {
-            Action::MoveRight => {
-                if self.piece.shift(1, 0, &self.matrix) && self.piece.touching_floor(&self.matrix) {
-                    self.reset_fall();
-                }
-            }
-            Action::MoveLeft => {
-                if self.piece.shift(-1, 0, &self.matrix) && self.piece.touching_floor(&self.matrix)
-                {
-                    self.reset_fall();
-                }
-            }
-            Action::MoveDown => {
-                if self.piece.shift(0, 1, &self.matrix) {
-                    self.reset_fall();
-                }
-            }
-            Action::RotateClockwise => {
-                if self.piece.rotate(true, &self.matrix) && self.piece.touching_floor(&self.matrix)
-                {
-                    self.reset_fall();
-                }
-            }
-            Action::RotateCounterClockwise => {
-                if self.piece.rotate(false, &self.matrix) && self.piece.touching_floor(&self.matrix)
-                {
-                    self.reset_fall();
-                }
-            }
-            Action::SoftDrop => {
-                let rows = self.piece.fall(&self.matrix);
-                if rows > 0 {
-                    self.reset_fall();
-                    self.score.soft_drop(rows);
-                }
-            }
-            Action::HardDrop => {
-                let rows = self.piece.fall(&self.matrix);
-                self.score.hard_drop(rows);
-
-                if self.interactive {
-                    self.action(Action::LockPiece);
-                }
-            }
             Action::HoldPiece => {
                 if let Some(shape) = self.holder.hold(self.piece.shape(), &mut self.bag) {
                     self.piece = Piece::new(shape);
@@ -232,19 +189,94 @@ impl Gameplay {
                 self.matrix.game_over();
                 self.explode();
             }
+            Action::MoveLeft
+            | Action::MoveRight
+            | Action::MoveDown
+            | Action::RotateClockwise
+            | Action::RotateCounterClockwise
+            | Action::SoftDrop
+            | Action::HardDrop => self.process_movement_action(g, action, sfx),
         };
 
-        if sfx {
-            match action {
-                Action::MoveDown | Action::MoveLeft | Action::MoveRight => g.sfx.play("move"),
-                Action::RotateClockwise | Action::RotateCounterClockwise => g.sfx.play("rotate"),
-                Action::SoftDrop => g.sfx.play("softdrop"),
-                Action::HardDrop => g.sfx.play("harddrop"),
-                _ => (),
-            }
-        }
-
         true
+    }
+
+    fn process_movement_action(&mut self, g: &mut Global, action: Action, sfx: bool) {
+        match action {
+            Action::MoveRight => {
+                let moved = self.piece.shift(1, 0, &self.matrix);
+                if moved && self.piece.touching_floor(&self.matrix) {
+                    self.reset_fall();
+                }
+
+                if sfx && moved {
+                    g.sfx.play("move");
+                }
+            }
+            Action::MoveLeft => {
+                let moved = self.piece.shift(-1, 0, &self.matrix);
+                if moved && self.piece.touching_floor(&self.matrix) {
+                    self.reset_fall();
+                }
+
+                if sfx && moved {
+                    g.sfx.play("move");
+                }
+            }
+            Action::MoveDown => {
+                if self.piece.shift(0, 1, &self.matrix) {
+                    self.reset_fall();
+
+                    if sfx {
+                        g.sfx.play("move");
+                    }
+                }
+            }
+            Action::RotateClockwise => {
+                let rotated = self.piece.rotate(true, &self.matrix);
+                if rotated && self.piece.touching_floor(&self.matrix) {
+                    self.reset_fall();
+                }
+
+                if sfx && rotated {
+                    g.sfx.play("rotate");
+                }
+            }
+            Action::RotateCounterClockwise => {
+                let rotated = self.piece.rotate(false, &self.matrix);
+                if rotated && self.piece.touching_floor(&self.matrix) {
+                    self.reset_fall();
+                }
+
+                if sfx && rotated {
+                    g.sfx.play("rotate");
+                }
+            }
+            Action::SoftDrop => {
+                let rows = self.piece.fall(&self.matrix);
+                if rows > 0 {
+                    self.reset_fall();
+                    self.score.soft_drop(rows);
+
+                    if sfx {
+                        g.sfx.play("softdrop");
+                    }
+                }
+            }
+            Action::HardDrop => {
+                let rows = self.piece.fall(&self.matrix);
+                self.score.hard_drop(rows);
+
+                if sfx && rows > 0 {
+                    g.sfx.play("harddrop");
+                }
+
+                if self.interactive {
+                    self.action(Action::LockPiece);
+                }
+            }
+            _ => (),
+        };
     }
 
     pub fn update(&mut self, ctx: &mut Context, g: &mut Global, sfx: bool) -> GameResult<()> {
@@ -289,7 +321,7 @@ impl Gameplay {
     }
 
     pub fn draw(&mut self, ctx: &mut Context, g: &Global, position: Point2<f32>) -> GameResult<()> {
-        let block_size = g.settings.block_size;
+        let block_size = g.settings.gameplay.block_size;
 
         let ui_block_size = ((block_size * 3) as f32 / 4.0) as i32;
         let ui_color = Color::new(0.8, 0.9, 1.0, 0.8);
@@ -333,7 +365,7 @@ impl Gameplay {
             self.piece
                 .draw(ctx, position, &mut self.blocks, block_size, 1.0)?;
 
-            if g.settings.ghost_piece > 0.0 {
+            if g.settings.gameplay.ghost_piece_opacity > 0.0 {
                 let mut ghost = self.piece.clone();
                 if ghost.fall(&self.matrix) >= ghost.grid().height {
                     ghost.draw(
@@ -341,7 +373,7 @@ impl Gameplay {
                         position,
                         &mut self.blocks,
                         block_size,
-                        g.settings.ghost_piece,
+                        g.settings.gameplay.ghost_piece_opacity,
                     )?;
                 }
             }

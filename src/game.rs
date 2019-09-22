@@ -46,18 +46,17 @@ pub struct Game {
 
 impl Game {
     pub fn new(ctx: &mut Context, mut g: Global) -> GameResult<Game> {
-        let repeat = Some((150, 50));
         let mut input = Input::new();
         input
-            .bind(KeyCode::Right, Action::MoveRight, repeat)
-            .bind(KeyCode::Left, Action::MoveLeft, repeat)
-            .bind(KeyCode::Down, Action::MoveDown, repeat)
-            .bind(KeyCode::Up, Action::RotateClockwise, None)
-            .bind(KeyCode::X, Action::RotateClockwise, None)
-            .bind(KeyCode::Z, Action::RotateCounterClockwise, None)
-            .bind(KeyCode::Space, Action::HardDrop, None)
-            .bind(KeyCode::LShift, Action::SoftDrop, None)
-            .bind(KeyCode::C, Action::HoldPiece, None)
+            .bind(KeyCode::Right, Action::MoveRight, true)
+            .bind(KeyCode::Left, Action::MoveLeft, true)
+            .bind(KeyCode::Down, Action::MoveDown, true)
+            .bind(KeyCode::Up, Action::RotateClockwise, false)
+            .bind(KeyCode::X, Action::RotateClockwise, false)
+            .bind(KeyCode::Z, Action::RotateCounterClockwise, false)
+            .bind(KeyCode::Space, Action::HardDrop, false)
+            .bind(KeyCode::LShift, Action::SoftDrop, false)
+            .bind(KeyCode::C, Action::HoldPiece, false)
             .exclude(KeyCode::Right, KeyCode::Left)
             .exclude(KeyCode::Left, KeyCode::Right);
 
@@ -83,7 +82,7 @@ impl Game {
 
         let mut music = audio::Source::new(ctx, utils::path(ctx, "chiptronical.ogg"))?;
         music.set_repeat(true);
-        music.set_volume(g.settings.music_volume);
+        music.set_volume(g.settings.audio.music_volume);
         music.play()?;
 
         let mut app = Game {
@@ -100,7 +99,11 @@ impl Game {
             replay,
         };
 
-        app.resize_event(ctx, app.g.settings.width, app.g.settings.height);
+        app.resize_event(
+            ctx,
+            app.g.settings.graphics.window_size.0 as f32,
+            app.g.settings.graphics.window_size.1 as f32,
+        );
 
         Ok(app)
     }
@@ -110,7 +113,7 @@ impl EventHandler for Game {
     fn update(&mut self, ctx: &mut Context) -> GameResult<()> {
         let start = Instant::now();
 
-        let fullscreen = self.g.settings.fullscreen;
+        let fullscreen = self.g.settings.graphics.fullscreen;
         if fullscreen != self.is_fullscreen && self.fullscreen_delay > Duration::from_millis(300) {
             self.is_fullscreen = fullscreen;
             self.fullscreen_delay = Duration::new(0, 0);
@@ -137,16 +140,16 @@ impl EventHandler for Game {
             event::quit(ctx);
         }
 
-        if self.g.settings.animated_background {
+        if self.g.settings.graphics.animated_background {
             self.particle_animation.update(ctx)?;
         }
 
-        if (self.music.volume() - self.g.settings.music_volume).abs() > 0.01 {
-            self.music.set_volume(self.g.settings.music_volume);
+        if (self.music.volume() - self.g.settings.audio.music_volume).abs() > 0.01 {
+            self.music.set_volume(self.g.settings.audio.music_volume);
         }
 
-        if (self.g.sfx.volume() - self.g.settings.sfx_volume).abs() > 0.01 {
-            self.g.sfx.set_volume(self.g.settings.sfx_volume);
+        if (self.g.sfx.volume() - self.g.settings.audio.sfx_volume).abs() > 0.01 {
+            self.g.sfx.set_volume(self.g.settings.audio.sfx_volume);
         }
 
         let mut gameplay = &mut self.gameplay;
@@ -157,7 +160,8 @@ impl EventHandler for Game {
                 gameplay = &mut replay.gameplay;
             }
             None => {
-                self.input.update(ctx);
+                self.input
+                    .update(ctx, self.g.settings.input.das, self.g.settings.input.arr);
                 gameplay.actions(&self.input.actions());
             }
         }
@@ -225,8 +229,8 @@ impl EventHandler for Game {
 
         let coords = graphics::screen_coordinates(ctx);
         let position_center = Point2::new(
-            (coords.w - (matrix::WIDTH * self.g.settings.block_size) as f32) / 2.0,
-            (coords.h - (matrix::HEIGHT * self.g.settings.block_size) as f32) / 2.0,
+            (coords.w - (matrix::WIDTH * self.g.settings.gameplay.block_size) as f32) / 2.0,
+            (coords.h - (matrix::HEIGHT * self.g.settings.gameplay.block_size) as f32) / 2.0,
         );
 
         let gameplay = if let Some(replay) = &mut self.replay {
@@ -279,17 +283,17 @@ impl EventHandler for Game {
 
     fn key_up_event(&mut self, ctx: &mut Context, keycode: KeyCode, _keymods: KeyMods) {
         match keycode {
-            KeyCode::F11 => self.g.settings.fullscreen ^= true,
+            KeyCode::F11 => self.g.settings.graphics.fullscreen ^= true,
             KeyCode::D => self.imgui_wrapper.toggle_window(),
             KeyCode::Escape => event::quit(ctx),
-            KeyCode::LAlt => self.g.settings.hide_menu ^= true,
+            KeyCode::LAlt => self.g.settings.graphics.hide_menu ^= true,
             _ => (),
         };
     }
 
     fn resize_event(&mut self, ctx: &mut Context, width: f32, height: f32) {
-        self.g.settings.width = width;
-        self.g.settings.height = height;
+        self.g.settings.graphics.window_size.0 = width as u32;
+        self.g.settings.graphics.window_size.1 = height as u32;
 
         let ratio = width / height;
         let width = 1080.0 * ratio;

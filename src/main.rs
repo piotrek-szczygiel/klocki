@@ -82,12 +82,12 @@ fn real_main() -> GameResult {
             .window_setup(
                 conf::WindowSetup::default()
                     .title(&format!("Klocki v{}", VERSION))
-                    .samples(g.settings.multi_sampling)
+                    .samples(g.settings.graphics.multi_sampling)
                     .vsync(false),
             )
             .window_mode(
                 conf::WindowMode::default()
-                    .dimensions(g.settings.width, g.settings.height)
+                    .dimensions(g.settings.graphics.window_size.0 as f32, g.settings.graphics.window_size.1 as f32)
                     .min_dimensions(450.0, 600.0)
                     .resizable(true),
             );
@@ -126,7 +126,7 @@ fn real_main() -> GameResult {
             .collect();
         g.settings_state.skins_imstr.sort();
 
-        g.sfx = Sfx::load(ctx, g.settings.sfx_volume)?;
+        g.sfx = Sfx::load(ctx, g.settings.audio.sfx_volume)?;
 
         let game = &mut Game::new(ctx, g)?;
 

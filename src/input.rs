@@ -6,14 +6,9 @@ use crate::action::Action;
 
 const MAX_KEYCODES: usize = 161;
 
-pub struct Repeat {
-    delay: Duration,
-    interval: Duration,
-}
-
 struct KeyBind {
     actions: Vec<Action>,
-    repeat: Option<Repeat>,
+    repeat: bool,
 }
 
 pub struct Input {
@@ -47,18 +42,10 @@ impl Input {
         &mut self,
         keycode: KeyCode,
         action: Action,
-        repeat: Option<(u64, u64)>,
+        repeat: bool,
     ) -> &mut Input {
         match self.key_binds.get_mut(&keycode) {
             None => {
-                let repeat = match repeat {
-                    None => None,
-                    Some(repeat) => Some(Repeat {
-                        delay: Duration::from_millis(repeat.0),
-                        interval: Duration::from_millis(repeat.1),
-                    }),
-                };
-
                 self.key_binds.insert(
                     keycode,
                     KeyBind {
@@ -85,7 +72,10 @@ impl Input {
         self
     }
 
-    pub fn update(&mut self, ctx: &Context) {
+    pub fn update(&mut self, ctx: &Context, das: u32, arr: u32) {
+        let das = Duration::from_millis(das.into());
+        let arr = Duration::from_millis(arr.into());
+
         let pressed_keys = ggez::input::keyboard::pressed_keys(ctx);
         let zero = Duration::new(0, 0);
         let dt = timer::delta(ctx);
@@ -120,8 +110,7 @@ impl Input {
                 Some(key_activated) => {
                     *key_activated += dt;
 
-                    if let Some(repeat) = &bind.repeat {
-                        if *key_activated >= repeat.delay {
+                    if bind.repeat && *key_activated >= das {
                             match self.key_repeated[key].as_mut() {
                                 None => {
                                     self.key_repeated[key] = Some(zero);
@@ -130,13 +119,12 @@ impl Input {
                                 Some(key_repeated) => {
                                     *key_repeated += dt;
 
-                                    if *key_repeated >= repeat.interval {
+                                    if *key_repeated >= arr {
                                         *key_repeated = zero;
                                         active = true;
                                     }
                                 }
                             };
-                        }
                     }
                 }
             };

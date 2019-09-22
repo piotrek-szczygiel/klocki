@@ -1,8 +1,8 @@
 <p align="center"><a href="https://github.com/piotrek-szczygiel/klocki"><img src="./logo.png" alt="Logo"></a></p>
 <h1 align="center">Klocki</h1>
 <p align="center">
-    <img src="https://travis-ci.org/piotrek-szczygiel/klocki.svg?branch=master">
-    <img src="https://ci.appveyor.com/api/projects/status/vjb1uy5nf7306jys/branch/master?svg=true">
+    <a href="https://travis-ci.org/piotrek-szczygiel/klocki"><img src="https://travis-ci.org/piotrek-szczygiel/klocki.svg?branch=master"></a>
+    <a href="https://ci.appveyor.com/project/piotrek-szczygiel/klocki"><img src="https://ci.appveyor.com/api/projects/status/vjb1uy5nf7306jys/branch/master?svg=true"></a>
     <img src="https://tokei.rs/b1/github/piotrek-szczygiel/klocki">
     <img src="https://img.shields.io/github/v/release/piotrek-szczygiel/klocki?include_prereleases&label=version">
     <img src="https://img.shields.io/github/downloads/piotrek-szczygiel/klocki/total">

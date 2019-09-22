@@ -253,7 +253,7 @@ impl ImGuiWrapper {
                 }
             }
 
-            if !g.settings.hide_menu {
+            if !g.settings.graphics.hide_menu {
                 if let Some(menu_bar) = ui.begin_main_menu_bar() {
                     if let Some(menu) = ui.begin_menu(im_str!("File"), true) {
                         if imgui::MenuItem::new(im_str!("Quit")).build(&ui) {
