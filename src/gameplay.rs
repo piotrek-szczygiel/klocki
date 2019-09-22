@@ -95,7 +95,7 @@ impl Gameplay {
     }
 
     pub fn action(&mut self, action: Action) {
-        self.actions.push_back(action);
+        self.actions.push_front(action);
         self.replay.add(action, self.action_duration);
         self.action_duration = Duration::new(0, 0);
     }
