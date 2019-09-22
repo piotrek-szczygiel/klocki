@@ -100,7 +100,6 @@ impl Score {
             font: Some(font),
             scale: Some(scale),
         });
-
         graphics::draw(ctx, &text, DrawParam::new().dest(position))?;
 
         Ok(())

@@ -358,6 +358,10 @@ impl Gameplay {
             ui_scale,
         )?;
 
+        // https://github.com/ggez/ggez/issues/664
+        ggez::graphics::pop_transform(ctx);
+        ggez::graphics::apply_transformations(ctx)?;
+
         self.matrix
             .draw(ctx, position, &mut self.blocks, block_size)?;
 
