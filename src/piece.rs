@@ -36,8 +36,41 @@ impl Piece {
         piece
     }
 
-    pub fn t_spin(&self) -> bool {
-        self.shape.shape_type == ShapeType::T && self.last_movement == Movement::Rotate
+    pub fn t_spin(&self, matrix: &matrix::Grid) -> bool {
+        if self.shape.shape_type != ShapeType::T || self.last_movement != Movement::Rotate {
+            return false;
+        }
+
+        // Position of the center tile
+        let x = self.x as usize + 1;
+        let y = self.y as usize + 1;
+
+        let mut occupied = 0;
+
+        let last_horizontal = matrix::WIDTH as usize - 1;
+        let last_vertical = (matrix::HEIGHT + matrix::VANISH) as usize - 1;
+
+        if x == 0 || matrix[y - 1][x - 1] != 0 {
+            log::trace!("1");
+            occupied += 1;
+        }
+
+        if x == last_horizontal || matrix[y - 1][x + 1] != 0 {
+            log::trace!("2");
+            occupied += 1;
+        }
+
+        if x == 0 || y == last_vertical || matrix[y + 1][x - 1] != 0 {
+            log::trace!("3");
+            occupied += 1;
+        }
+
+        if x == last_horizontal || y == last_vertical || matrix[y + 1][x + 1] != 0 {
+            log::trace!("4");
+            occupied += 1;
+        }
+
+        occupied >= 3
     }
 
     pub fn reset(&mut self) {

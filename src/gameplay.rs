@@ -151,13 +151,14 @@ impl Gameplay {
                     Locked::Success(rows) => {
                         if rows > 0 {
                             self.explode();
-                            self.score.lock(rows, self.piece.t_spin());
+                            self.score
+                                .lock(rows, self.piece.t_spin(&self.matrix.grid()));
                         } else {
                             self.score.reset_combo();
                         }
 
                         if sfx {
-                            match (rows, self.piece.t_spin()) {
+                            match (rows, self.piece.t_spin(&self.matrix.grid())) {
                                 (1, false) => g.sfx.play("erase1"),
                                 (2, false) => g.sfx.play("erase2"),
                                 (3, false) => g.sfx.play("erase3"),

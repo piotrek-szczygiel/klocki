@@ -13,7 +13,7 @@ pub const WIDTH: i32 = 10;
 pub const HEIGHT: i32 = 20;
 pub const VANISH: i32 = 20;
 
-type Grid = [[usize; WIDTH as usize]; (HEIGHT + VANISH) as usize];
+pub type Grid = [[usize; WIDTH as usize]; (HEIGHT + VANISH) as usize];
 
 pub struct Matrix {
     grid: Grid,
@@ -100,6 +100,10 @@ impl Matrix {
         self.grid_mesh = Some((grid_mesh.build(ctx)?, block_size));
 
         Ok(())
+    }
+
+    pub fn grid(&self) -> &Grid {
+        &self.grid
     }
 
     pub fn clear(&mut self) {
