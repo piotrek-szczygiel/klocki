@@ -83,7 +83,7 @@ fn real_main() -> GameResult {
                 conf::WindowSetup::default()
                     .title(&format!("Klocki v{}", VERSION))
                     .samples(g.settings.graphics.multi_sampling)
-                    .vsync(false),
+                    .vsync(g.settings.graphics.vsync),
             )
             .window_mode(
                 conf::WindowMode::default()
