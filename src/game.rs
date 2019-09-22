@@ -226,7 +226,9 @@ impl EventHandler for Game {
             )),
         )?;
 
-        self.particle_animation.draw(ctx)?;
+        if self.g.settings.graphics.animated_background {
+            self.particle_animation.draw(ctx)?;
+        }
 
         let coords = graphics::screen_coordinates(ctx);
         let position_center = Point2::new(

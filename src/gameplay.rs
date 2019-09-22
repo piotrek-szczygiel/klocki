@@ -189,6 +189,10 @@ impl Gameplay {
                 self.game_over = true;
                 self.matrix.game_over();
                 self.explode();
+
+                if sfx {
+                    g.sfx.play("gameover");
+                }
             }
             Action::MoveLeft
             | Action::MoveRight

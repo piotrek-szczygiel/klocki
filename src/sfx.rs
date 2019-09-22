@@ -17,7 +17,8 @@ impl Sfx {
     pub fn load(ctx: &mut Context, volume: f32) -> GameResult<Sfx> {
         let sounds = [
             "move", "rotate", "softdrop", "harddrop", "hold", "holdfail", "lock", "linefall",
-            "erase1", "erase2", "erase3", "erase4", "tspin0", "tspin1", "tspin2", "tspin3",
+            "gameover", "erase1", "erase2", "erase3", "erase4", "tspin0", "tspin1", "tspin2",
+            "tspin3",
         ]
         .iter()
         .map(|&s| (s, Sfx::source(ctx, s, volume)))
