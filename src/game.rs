@@ -85,6 +85,12 @@ impl Game {
         music.set_volume(g.settings.audio.music_volume);
         music.play()?;
 
+        let mut path = dirs::data_local_dir().unwrap_or_default();
+        path.push("klocki");
+        path.push("replays");
+        fs::create_dir_all(&path)
+            .unwrap_or_else(|e| log::warn!("Unable to create directory {:?}: {:?}", &path, e));
+
         let mut app = Game {
             g,
             input,
@@ -184,19 +190,14 @@ impl EventHandler for Game {
                 let mut path = dirs::data_local_dir().unwrap_or_default();
                 path.push("klocki");
                 path.push("replays");
+                path.push(format!(
+                    "Score {} - {}.klocki",
+                    self.gameplay.score(),
+                    Utc::now().format("%Y%m%d_%H%M%S"),
+                ));
 
-                if let Err(e) = fs::create_dir_all(&path) {
-                    log::error!("Unable to create replay directory: {:?}", e);
-                } else {
-                    path.push(format!(
-                        "Score {} - {}.klocki",
-                        self.gameplay.score(),
-                        Utc::now().format("%Y%m%d_%H%M%S"),
-                    ));
-
-                    self.gameplay.replay_data().save(&path);
-                    ReplayData::load(&path).unwrap();
-                }
+                self.gameplay.replay_data().save(&path);
+                ReplayData::load(&path).unwrap();
             }
         }
 
