@@ -30,7 +30,7 @@ pub struct Graphics {
 pub struct Gameplay {
     pub block_size: i32,
     pub ghost_piece_opacity: f32,
-    pub skin_id: usize,
+    pub skin: String,
 }
 
 #[derive(Serialize, Deserialize)]
@@ -49,6 +49,7 @@ pub struct Input {
 pub struct SettingsState {
     pub skins: Vec<PathBuf>,
     pub skins_imstr: Vec<ImString>,
+    pub skin_id: usize,
     pub skin_switched: bool,
     pub restart: bool,
 }
@@ -79,7 +80,7 @@ impl Settings {
                 gameplay: Gameplay {
                     block_size: 32,
                     ghost_piece_opacity: 0.1,
-                    skin_id: 0,
+                    skin: String::from("default.png"),
                 },
                 audio: Audio {
                     music_volume: 0.1,
@@ -98,7 +99,7 @@ impl Settings {
     }
 
     pub fn save(&self) {
-        let toml = toml::to_string_pretty(self).unwrap();
+        let toml = toml::to_string(self).unwrap();
         let path = Settings::path();
         fs::write(&path, toml).unwrap_or_else(|e| panic!("Unable to save settings: {:?}", e));
         log::info!("Saved settings to: {:?}", &path);
@@ -124,7 +125,7 @@ impl Settings {
     pub fn tileset(&self, ctx: &mut Context, state: &SettingsState) -> GameResult<Image> {
         Image::new(
             ctx,
-            utils::path(ctx, state.skins[self.gameplay.skin_id].to_str().unwrap()),
+            utils::path(ctx, state.skins[state.skin_id].to_str().unwrap()),
         )
     }
 
@@ -225,12 +226,16 @@ impl Settings {
                 ui.same_line(pos);
                 let skins: Vec<&ImStr> = state.skins_imstr.iter().map(|s| s.as_ref()).collect();
                 let id = ui.push_id(im_str!("skins"));
-                if ComboBox::new(im_str!("")).build_simple_string(
-                    &ui,
-                    &mut self.gameplay.skin_id,
-                    &skins,
-                ) {
+                if ComboBox::new(im_str!("")).build_simple_string(&ui, &mut state.skin_id, &skins) {
                     state.skin_switched = true;
+
+                    self.gameplay.skin = String::from(
+                        state
+                            .skins_imstr
+                            .get(state.skin_id)
+                            .unwrap_or(&ImString::new(""))
+                            .to_str(),
+                    );
                 }
                 id.pop(&ui);
             }

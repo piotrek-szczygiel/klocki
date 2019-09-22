@@ -129,6 +129,13 @@ fn real_main() -> GameResult {
             .collect();
         g.settings_state.skins_imstr.sort();
 
+        g.settings_state.skin_id = g
+            .settings_state
+            .skins_imstr
+            .iter()
+            .position(|s| s.to_str() == g.settings.gameplay.skin)
+            .unwrap_or_default();
+
         g.sfx = Sfx::load(ctx, g.settings.audio.sfx_volume)?;
 
         let game = &mut Game::new(ctx, g)?;
