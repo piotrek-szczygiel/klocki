@@ -5,16 +5,15 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "type": "lldb",
+            "name": "Debug Klocki",
+            "type": "cppvsdbg",
             "request": "launch",
-            "name": "Debug Game",
-            "program": "${workspaceFolder}/target/debug/klocki",
+            "program": "${workspaceFolder}/target/debug/klocki.exe",
             "args": [],
+            "stopAtEntry": false,
             "cwd": "${workspaceFolder}",
-            "env": {
-                "RUST_BACKTRACE": "1",
-                "CARGO_MANIFEST_DIR": "${workspaceFolder}"
-            }
+            "environment": [],
+            "externalConsole": false
         }
     ]
 }

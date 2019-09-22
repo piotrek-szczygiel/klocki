@@ -4,52 +4,16 @@
     "version": "2.0.0",
     "tasks": [
         {
-            "label": "build",
-            "type": "cargo",
-            "subcommand": "build",
-            "problemMatcher": [
-                "$rustc"
-            ],
-            "group": {
-                "kind": "build",
-                "isDefault": true
-            }
-        },
-        {
             "label": "run release",
             "type": "shell",
             "command": "cargo run --release",
-            "problemMatcher": [
-                "$rustc"
-            ]
+            "problemMatcher": "$rustc"
         },
         {
-            "label": "test",
-            "type": "cargo",
-            "subcommand": "test",
-            "problemMatcher": [
-                "$rustc"
-            ],
-            "group": {
-                "kind": "test",
-                "isDefault": true
-            }
-        },
-        {
-            "label": "format",
+            "label": "build debug",
             "type": "shell",
-            "command": "cargo fmt",
-            "problemMatcher": [
-                "$rustc"
-            ],
-            "presentation": {
-                "echo": false,
-                "reveal": "never",
-                "focus": false,
-                "panel": "shared",
-                "showReuseMessage": true,
-                "clear": false
-            }
-        },
+            "command": "cargo build",
+            "problemMatcher": "$rustc"
+        }
     ]
 }
