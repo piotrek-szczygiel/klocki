@@ -38,12 +38,7 @@ impl Input {
         }
     }
 
-    pub fn bind(
-        &mut self,
-        keycode: KeyCode,
-        action: Action,
-        repeat: bool,
-    ) -> &mut Input {
+    pub fn bind(&mut self, keycode: KeyCode, action: Action, repeat: bool) -> &mut Input {
         match self.key_binds.get_mut(&keycode) {
             None => {
                 self.key_binds.insert(
@@ -111,20 +106,20 @@ impl Input {
                     *key_activated += dt;
 
                     if bind.repeat && *key_activated >= das {
-                            match self.key_repeated[key].as_mut() {
-                                None => {
-                                    self.key_repeated[key] = Some(zero);
+                        match self.key_repeated[key].as_mut() {
+                            None => {
+                                self.key_repeated[key] = Some(zero);
+                                active = true;
+                            }
+                            Some(key_repeated) => {
+                                *key_repeated += dt;
+
+                                if *key_repeated >= arr {
+                                    *key_repeated = zero;
                                     active = true;
                                 }
-                                Some(key_repeated) => {
-                                    *key_repeated += dt;
-
-                                    if *key_repeated >= arr {
-                                        *key_repeated = zero;
-                                        active = true;
-                                    }
-                                }
-                            };
+                            }
+                        };
                     }
                 }
             };

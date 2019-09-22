@@ -85,7 +85,7 @@ impl Settings {
                     music_volume: 0.1,
                     sfx_volume: 0.2,
                 },
-                input: Input { das: 133, arr: 20 },
+                input: Input { das: 150, arr: 50 },
             }
         }
     }

@@ -87,8 +87,11 @@ fn real_main() -> GameResult {
             )
             .window_mode(
                 conf::WindowMode::default()
-                    .dimensions(g.settings.graphics.window_size.0 as f32, g.settings.graphics.window_size.1 as f32)
-                    .min_dimensions(450.0, 600.0)
+                    .dimensions(
+                        g.settings.graphics.window_size.0 as f32,
+                        g.settings.graphics.window_size.1 as f32,
+                    )
+                    .min_dimensions(350.0, 450.0)
                     .resizable(true),
             );
 
