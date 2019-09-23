@@ -115,7 +115,7 @@ impl Replay {
 
         while let Some(duration) = self.replay_data.current_duration() {
             if self.action_duration >= duration {
-                self.gameplay.action(self.replay_data.pop_action());
+                self.gameplay.action(self.replay_data.pop_action(), false);
                 self.action_duration = Duration::new(0, 0);
             } else {
                 break;

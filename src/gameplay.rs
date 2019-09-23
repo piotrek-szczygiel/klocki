@@ -98,15 +98,17 @@ impl Gameplay {
         self.matrix.blocked()
     }
 
-    pub fn action(&mut self, action: Action) {
-        self.actions.push_front(action);
-        self.replay.add(action, self.action_duration);
-        self.action_duration = Duration::new(0, 0);
+    pub fn action(&mut self, action: Action, immediate: bool) {
+        if immediate {
+            self.actions.push_front(action);
+        } else {
+            self.actions.push_back(action);
+        }
     }
 
     pub fn actions(&mut self, actions: &[Action]) {
         for &action in actions {
-            self.action(action);
+            self.action(action, false);
         }
     }
 
@@ -142,7 +144,7 @@ impl Gameplay {
             }
             Action::FallPiece => {
                 if !self.piece.shift(0, 1, &self.matrix) && self.interactive {
-                    self.action(Action::LockPiece);
+                    self.action(Action::LockPiece, true);
                 }
             }
             Action::LockPiece => {
@@ -152,7 +154,7 @@ impl Gameplay {
                 ) {
                     Locked::Collision => {
                         if self.interactive {
-                            self.action(Action::GameOver);
+                            self.action(Action::GameOver, true);
                         }
                     }
                     Locked::Success(rows) => {
@@ -180,7 +182,7 @@ impl Gameplay {
 
                         self.piece = Piece::new(self.bag.pop());
                         if self.matrix.collision(&self.piece) && self.interactive {
-                            self.action(Action::GameOver);
+                            self.action(Action::GameOver, true);
                         } else {
                             self.reset_fall();
                             self.holder.unlock();
@@ -286,7 +288,7 @@ impl Gameplay {
                 }
 
                 if self.interactive {
-                    self.action(Action::LockPiece);
+                    self.action(Action::LockPiece, true);
                 }
             }
             _ => (),
@@ -295,7 +297,7 @@ impl Gameplay {
 
     pub fn update(&mut self, ctx: &mut Context, g: &mut Global, sfx: bool) -> GameResult<()> {
         if g.imgui_state.game_over {
-            self.action(Action::GameOver);
+            self.action(Action::GameOver, true);
         }
 
         if g.imgui_state.debug_t_spin_tower {
@@ -314,7 +316,8 @@ impl Gameplay {
         self.action_duration += timer::delta(ctx);
 
         while let Some(action) = self.actions.pop_front() {
-            // self.actions_history.push(action);
+            self.replay.add(action, self.action_duration);
+            self.action_duration = Duration::new(0, 0);
 
             if !self.process_action(g, action, sfx) {
                 break;
@@ -327,7 +330,7 @@ impl Gameplay {
             if self.still >= self.fall_interval {
                 self.still -= self.fall_interval;
 
-                self.action(Action::FallPiece);
+                self.action(Action::FallPiece, true);
             }
         }
 
