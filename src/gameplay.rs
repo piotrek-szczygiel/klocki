@@ -14,6 +14,7 @@ use crate::{
     holder::Holder,
     matrix::{self, Locked, Matrix},
     piece::Piece,
+    popups::Popups,
     replay::ReplayData,
     score::Score,
     utils,
@@ -31,6 +32,7 @@ pub struct Gameplay {
     piece: Piece,
     holder: Holder,
     score: Score,
+    popups: Popups,
 
     game_over: bool,
     still: Duration,
@@ -58,8 +60,9 @@ impl Gameplay {
         let piece = Piece::new(bag.pop());
         let holder = Holder::default();
         let score = Score::default();
+        let popups = Popups::default();
 
-        let font = Font::new(ctx, utils::path(ctx, "fonts/game.ttf"))?;
+        let font = Font::new(ctx, utils::path(ctx, "fonts/bold.ttf"))?;
 
         let blocks = Blocks::new(g.settings.tileset(ctx, &g.settings_state)?);
 
@@ -73,6 +76,7 @@ impl Gameplay {
             piece,
             holder,
             score,
+            popups,
             game_over: false,
             still: Duration::new(0, 0),
             fall_interval: Duration::from_secs(1),
@@ -160,8 +164,10 @@ impl Gameplay {
                     Locked::Success(rows) => {
                         if rows > 0 {
                             self.explode();
-                            self.score
-                                .lock(rows, self.piece.t_spin(&self.matrix.grid()));
+                            let t_spin = self.piece.t_spin(&self.matrix.grid());
+                            self.score.lock(rows, t_spin);
+                            self.popups
+                                .lock(rows, t_spin, self.score.btb(), self.score.combo());
                         } else {
                             self.score.reset_combo();
                         }
@@ -324,6 +330,8 @@ impl Gameplay {
             }
         }
 
+        self.popups.update(ctx);
+
         if self.interactive {
             self.still += timer::delta(ctx);
 
@@ -399,6 +407,17 @@ impl Gameplay {
                 }
             }
         }
+
+        self.popups.draw(
+            ctx,
+            position
+                + Vector2::new(
+                    -ui_block_size as f32 * 10.0 - block_size as f32,
+                    matrix::HEIGHT as f32 / 3.0 * block_size as f32,
+                ),
+            ui_font,
+            ui_block_size as f32,
+        )?;
 
         Ok(())
     }

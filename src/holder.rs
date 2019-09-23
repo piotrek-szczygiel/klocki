@@ -47,7 +47,7 @@ impl Holder {
         font: Font,
     ) -> GameResult {
         let text = Text::new(TextFragment {
-            text: "hold".to_string(),
+            text: "Hold".to_string(),
             color: Some(text_color),
             font: Some(font),
             scale: Some(Scale::uniform(block_size as f32)),

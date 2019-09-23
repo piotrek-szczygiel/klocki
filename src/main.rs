@@ -10,6 +10,7 @@ mod input;
 mod matrix;
 mod particles;
 mod piece;
+mod popups;
 mod replay;
 mod score;
 mod settings;

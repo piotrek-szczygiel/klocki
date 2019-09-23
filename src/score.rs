@@ -9,6 +9,7 @@ pub struct Score {
     score: i32,
     last_clear: i32,
     combo: Option<i32>,
+    btb: bool,
 }
 
 impl Score {
@@ -26,6 +27,14 @@ impl Score {
 
     pub fn reset_combo(&mut self) {
         self.combo = None;
+    }
+
+    pub fn btb(&self) -> bool {
+        self.btb
+    }
+
+    pub fn combo(&self) -> Option<i32> {
+        self.combo
     }
 
     pub fn lock(&mut self, rows: i32, t_spin: bool) {
@@ -67,17 +76,18 @@ impl Score {
             _ => (),
         }
 
+        self.btb = false;
         if last_hard {
             _garbage += 1;
 
             if score >= 800 {
+                self.btb = true;
                 score += score / 2;
             }
         }
 
         if let Some(combo) = &mut self.combo {
             *combo += 1;
-            log::trace!("Score: Combo {}", combo);
             score += 50 * *combo;
         } else {
             self.combo = Some(0);
@@ -96,11 +106,12 @@ impl Score {
         scale: Scale,
     ) -> GameResult {
         let text = Text::new(TextFragment {
-            text: format!("score: {}", self.score),
+            text: format!("Score: {}", self.score),
             color: Some(color),
             font: Some(font),
             scale: Some(scale),
         });
+
         graphics::draw(ctx, &text, DrawParam::new().dest(position))?;
 
         Ok(())

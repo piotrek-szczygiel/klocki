@@ -53,7 +53,7 @@ impl Bag {
         font: Font,
     ) -> GameResult {
         let text = Text::new(TextFragment {
-            text: "next".to_string(),
+            text: "Next".to_string(),
             color: Some(text_color),
             font: Some(font),
             scale: Some(Scale::uniform(block_size as f32)),
