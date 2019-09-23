@@ -200,6 +200,8 @@ impl Gameplay {
                 if sfx {
                     g.sfx.play("gameover");
                 }
+
+                return false;
             }
             Action::MoveLeft
             | Action::MoveRight
@@ -383,7 +385,7 @@ impl Gameplay {
 
             if g.settings.gameplay.ghost_piece > 0 {
                 let mut ghost = self.piece.clone();
-                if ghost.fall(&self.matrix) >= ghost.grid().height {
+                if ghost.fall(&self.matrix) > 0 {
                     ghost.draw(
                         ctx,
                         position,

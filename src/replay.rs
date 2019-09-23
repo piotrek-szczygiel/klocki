@@ -39,11 +39,11 @@ impl ReplayData {
         self.actions.push_back(TimedAction { action, duration });
     }
 
-    pub fn current_duration(&self) -> Duration {
+    pub fn current_duration(&self) -> Option<Duration> {
         if let Some(action) = self.actions.get(0) {
-            action.duration
+            Some(action.duration)
         } else {
-            Duration::new(0, 0)
+            None
         }
     }
 
@@ -113,9 +113,13 @@ impl Replay {
     pub fn update(&mut self, ctx: &mut Context) {
         self.action_duration += timer::delta(ctx);
 
-        if self.action_duration >= self.replay_data.current_duration() {
-            self.gameplay.action(self.replay_data.pop_action());
-            self.action_duration = Duration::new(0, 0);
+        while let Some(duration) = self.replay_data.current_duration() {
+            if self.action_duration >= duration {
+                self.gameplay.action(self.replay_data.pop_action());
+                self.action_duration = Duration::new(0, 0);
+            } else {
+                break;
+            }
         }
     }
 }
