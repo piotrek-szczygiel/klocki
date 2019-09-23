@@ -75,9 +75,10 @@ impl Score {
             }
         }
 
-        if let Some(mut combo) = self.combo {
-            combo += 1;
-            score += 50 * combo;
+        if let Some(combo) = &mut self.combo {
+            *combo += 1;
+            log::trace!("Score: Combo {}", combo);
+            score += 50 * *combo;
         } else {
             self.combo = Some(0);
         }
