@@ -74,8 +74,8 @@ impl Piece {
     }
 
     pub fn reset(&mut self) {
-        self.x = 5 - (self.shape.grids[0].width + 1) / 2;
-        self.y = matrix::HEIGHT - self.shape.grids[0].height - self.shape.grids[0].offset_y;
+        self.x = (matrix::WIDTH as f32 / 2.0 - self.shape.grids[0].width as f32 / 2.0) as i32;
+        self.y = matrix::VANISH - self.shape.grids[0].height - self.shape.grids[0].offset_y;
         self.rotation = 0;
         self.last_movement = Movement::None;
     }
