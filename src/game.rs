@@ -82,7 +82,7 @@ impl Game {
 
         let mut music = audio::Source::new(ctx, utils::path(ctx, "chiptronical.ogg"))?;
         music.set_repeat(true);
-        music.set_volume(g.settings.audio.music_volume);
+        music.set_volume(g.settings.audio.music_volume as f32 / 100.0);
         music.play()?;
 
         let mut path = dirs::data_local_dir().unwrap_or_default();
@@ -150,11 +150,12 @@ impl EventHandler for Game {
             self.particle_animation.update(ctx)?;
         }
 
-        if (self.music.volume() - self.g.settings.audio.music_volume).abs() > 0.01 {
-            self.music.set_volume(self.g.settings.audio.music_volume);
+        if (self.music.volume() * 100.0) as u32 != self.g.settings.audio.music_volume {
+            self.music
+                .set_volume(self.g.settings.audio.music_volume as f32 / 100.0);
         }
 
-        if (self.g.sfx.volume() - self.g.settings.audio.sfx_volume).abs() > 0.01 {
+        if self.g.sfx.volume() != self.g.settings.audio.sfx_volume {
             self.g.sfx.set_volume(self.g.settings.audio.sfx_volume);
         }
 
@@ -166,9 +167,11 @@ impl EventHandler for Game {
                 gameplay = &mut replay.gameplay;
             }
             None => {
-                self.input
-                    .update(ctx, self.g.settings.input.das, self.g.settings.input.arr);
-                gameplay.actions(&self.input.actions());
+                if !gameplay.blocked() {
+                    self.input
+                        .update(ctx, self.g.settings.input.das, self.g.settings.input.arr);
+                    gameplay.actions(&self.input.actions());
+                }
             }
         }
 

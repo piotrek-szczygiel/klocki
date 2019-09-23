@@ -10,11 +10,11 @@ use crate::utils;
 #[derive(Default)]
 pub struct Sfx {
     sounds: HashMap<&'static str, Option<Source>>,
-    volume: f32,
+    volume: u32,
 }
 
 impl Sfx {
-    pub fn load(ctx: &mut Context, volume: f32) -> GameResult<Sfx> {
+    pub fn load(ctx: &mut Context, volume: u32) -> GameResult<Sfx> {
         let sounds = [
             "move", "rotate", "softdrop", "harddrop", "hold", "holdfail", "lock", "linefall",
             "gameover", "erase1", "erase2", "erase3", "erase4", "tspin0", "tspin1", "tspin2",
@@ -37,24 +37,24 @@ impl Sfx {
         }
     }
 
-    pub fn volume(&self) -> f32 {
+    pub fn volume(&self) -> u32 {
         self.volume
     }
 
-    pub fn set_volume(&mut self, volume: f32) {
+    pub fn set_volume(&mut self, volume: u32) {
         for (_, sound) in self.sounds.iter_mut() {
             if let Some(sound) = sound {
-                sound.set_volume(volume);
+                sound.set_volume(volume as f32 / 100.0);
             }
         }
     }
 
-    fn source(ctx: &mut Context, name: &'static str, volume: f32) -> Option<Source> {
+    fn source(ctx: &mut Context, name: &'static str, volume: u32) -> Option<Source> {
         let path = String::from("sfx/") + name + ".wav";
         match Source::new(ctx, utils::path(ctx, &path)) {
             Ok(mut s) => {
                 log::debug!("Loaded {}", path);
-                s.set_volume(volume);
+                s.set_volume(volume as f32 / 100.0);
                 Some(s)
             }
             Err(e) => {

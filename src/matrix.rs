@@ -15,11 +15,19 @@ pub const VANISH: i32 = 20;
 
 pub type Grid = [[usize; WIDTH as usize]; (HEIGHT + VANISH) as usize];
 
+struct Clearing {
+    rows: VecDeque<i32>,
+    current_duration: Duration,
+    max_duration: Duration,
+    just_created: bool,
+    finished: bool,
+}
+
 pub struct Matrix {
     grid: Grid,
     grid_mesh: Option<(Mesh, i32)>,
 
-    clearing: Option<(VecDeque<i32>, Duration)>,
+    clearing: Option<Clearing>,
     destroyed_blocks: Vec<DestroyedBlock>,
     game_over: bool,
 }
@@ -131,7 +139,7 @@ impl Matrix {
         false
     }
 
-    pub fn lock(&mut self, piece: &Piece) -> Locked {
+    pub fn lock(&mut self, piece: &Piece, clear_delay: Duration) -> Locked {
         let mut collision = self.collision(&piece);
 
         let grid = piece.grid();
@@ -152,7 +160,7 @@ impl Matrix {
         }
 
         if !collision {
-            Locked::Success(self.clear_full_rows())
+            Locked::Success(self.clear_full_rows(clear_delay))
         } else {
             Locked::Collision
         }
@@ -163,27 +171,36 @@ impl Matrix {
     }
 
     pub fn update(&mut self, ctx: &mut Context, g: &mut Global, sfx: bool) {
-        let mut clear = None;
-        if let Some((rows, duration)) = &mut self.clearing {
-            *duration += timer::delta(ctx);
+        let mut clear = vec![];
 
-            if rows.is_empty() {
-                self.clearing = None;
-            } else if *duration > Duration::from_millis(75) {
-                *duration = Duration::new(0, 0);
-                clear = rows.pop_front();
+        if let Some(clearing) = &mut self.clearing {
+            clearing.current_duration += timer::delta(ctx);
+            loop {
+                if clearing.just_created || clearing.current_duration >= clearing.max_duration {
+                    clearing.just_created = false;
+                    clearing.current_duration = Duration::new(0, 0);
 
-                if sfx && !self.game_over {
-                    g.sfx.play("linefall");
+                    if clearing.finished {
+                        self.clearing = None;
+                        break;
+                    } else {
+                        clear.push(clearing.rows.pop_front().unwrap());
+
+                        if sfx && !self.game_over {
+                            g.sfx.play("linefall");
+                        }
+
+                        if clearing.rows.is_empty() {
+                            clearing.finished = true;
+                        }
+                    }
+                } else {
+                    break;
                 }
-
-                *rows = rows.iter().map(|row| row + 1).collect();
             }
         }
 
-        if let Some(row) = clear {
-            self.collapse_row(row);
-        }
+        self.collapse_rows(&clear);
 
         let dt = utils::dt_f32(ctx);
         let g = Vector2::new(0.0, 75.0) * dt;
@@ -269,12 +286,18 @@ impl Matrix {
         }
     }
 
-    fn clear_full_rows(&mut self) -> i32 {
+    fn clear_full_rows(&mut self, clear_delay: Duration) -> i32 {
         let rows = self.get_full_rows();
         let result = rows.len();
 
         if !rows.is_empty() {
-            self.clearing = Some((VecDeque::from(rows), Duration::new(0, 0)));
+            self.clearing = Some(Clearing {
+                rows: VecDeque::from(rows),
+                current_duration: Duration::new(0, 0),
+                max_duration: clear_delay / result as u32,
+                just_created: true,
+                finished: false,
+            });
         }
 
         result as i32
@@ -283,7 +306,7 @@ impl Matrix {
     fn get_full_rows(&self) -> Vec<i32> {
         let mut rows = vec![];
 
-        for y in (0..HEIGHT + VANISH).rev() {
+        for y in 0..HEIGHT + VANISH {
             let mut full = true;
 
             for x in 0..WIDTH {
@@ -301,30 +324,32 @@ impl Matrix {
         rows
     }
 
-    fn collapse_row(&mut self, row: i32) {
-        let mut rng = rand::thread_rng();
+    fn collapse_rows(&mut self, rows: &[i32]) {
+        for &row in rows {
+            let mut rng = rand::thread_rng();
 
-        let uniform_vx = Uniform::new(-5.0, 5.0);
-        let normal_vy = Normal::new(-10.0, 5.0).unwrap();
-        let uniform_vr = Uniform::new(-4.0 * std::f32::consts::PI, 4.0 * std::f32::consts::PI);
+            let uniform_vx = Uniform::new(-5.0, 5.0);
+            let normal_vy = Normal::new(-10.0, 5.0).unwrap();
+            let uniform_vr = Uniform::new(-4.0 * std::f32::consts::PI, 4.0 * std::f32::consts::PI);
 
-        for x in 0..WIDTH {
-            let vx = uniform_vx.sample(&mut rng);
-            let vy = normal_vy.sample(&mut rng);
-            let vr = uniform_vr.sample(&mut rng);
-            self.generate_destroyed_block(x, row, Vector2::new(vx, vy), vr);
-        }
-
-        for y in (1..=row).rev() {
             for x in 0..WIDTH {
-                self.grid[y as usize][x as usize] = self.grid[y as usize - 1][x as usize];
+                let vx = uniform_vx.sample(&mut rng);
+                let vy = normal_vy.sample(&mut rng);
+                let vr = uniform_vr.sample(&mut rng);
+                self.generate_destroyed_block(x, row, Vector2::new(vx, vy), vr);
+            }
+
+            for y in (1..=row).rev() {
+                for x in 0..WIDTH {
+                    self.grid[y as usize][x as usize] = self.grid[y as usize - 1][x as usize];
+                }
             }
         }
     }
 
     pub fn game_over(&mut self) {
         let mut rows = vec![];
-        for y in (0..HEIGHT + VANISH).rev() {
+        for y in 0..HEIGHT + VANISH {
             for x in 0..WIDTH {
                 if self.grid[y as usize][x as usize] != 0 {
                     rows.push(y);
@@ -333,7 +358,7 @@ impl Matrix {
             }
         }
 
-        self.clearing = Some((VecDeque::from(rows), Duration::new(0, 0)));
+        self.collapse_rows(&rows);
         self.game_over = true;
     }
 

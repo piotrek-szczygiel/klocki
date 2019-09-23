@@ -20,23 +20,24 @@ pub struct Settings {
 pub struct Graphics {
     pub window_size: (u32, u32),
     pub fullscreen: bool,
-    pub multi_sampling: NumSamples,
     pub vsync: bool,
     pub animated_background: bool,
     pub hide_menu: bool,
+    pub multi_sampling: NumSamples,
 }
 
 #[derive(Serialize, Deserialize)]
 pub struct Gameplay {
     pub block_size: i32,
-    pub ghost_piece_opacity: f32,
+    pub ghost_piece: u32,
+    pub clear_delay: u32,
     pub skin: String,
 }
 
 #[derive(Serialize, Deserialize)]
 pub struct Audio {
-    pub music_volume: f32,
-    pub sfx_volume: f32,
+    pub music_volume: u32,
+    pub sfx_volume: u32,
 }
 
 #[derive(Serialize, Deserialize)]
@@ -79,12 +80,13 @@ impl Settings {
                 },
                 gameplay: Gameplay {
                     block_size: 32,
-                    ghost_piece_opacity: 0.1,
+                    ghost_piece: 10,
+                    clear_delay: 0,
                     skin: String::from("default.png"),
                 },
                 audio: Audio {
-                    music_volume: 0.1,
-                    sfx_volume: 0.2,
+                    music_volume: 10,
+                    sfx_volume: 50,
                 },
                 input: Input { das: 150, arr: 50 },
             }
@@ -142,20 +144,39 @@ impl Settings {
             ui.separator();
 
             {
+                let mut restart_popup = false;
+
                 ui.text(im_str!("Fullscreen"));
                 ui.same_line(pos);
-                let id = ui.push_id("fullscreen");
-                ui.checkbox(im_str!(""), &mut self.graphics.fullscreen);
-                id.pop(&ui);
+                ui.checkbox(im_str!("<F11>"), &mut self.graphics.fullscreen);
 
                 let mut sampling_id = SAMPLINGS
                     .iter()
                     .position(|&s| s == self.graphics.multi_sampling)
                     .unwrap();
 
-                ui.text(im_str!("Multi-Sampling"));
+                ui.text(im_str!("V-Sync"));
                 ui.same_line(pos);
-                let mut restart_popup = false;
+                let id = ui.push_id(im_str!("vsync"));
+                if ui.checkbox(im_str!(""), &mut self.graphics.vsync) {
+                    restart_popup = true;
+                }
+                id.pop(&ui);
+
+                ui.text(im_str!("Background"));
+                ui.same_line(pos);
+                let id = ui.push_id(im_str!("background"));
+                ui.checkbox(im_str!(""), &mut self.graphics.animated_background);
+                id.pop(&ui);
+
+                ui.text(im_str!("Hide menu"));
+                ui.same_line(pos);
+                if ui.checkbox(im_str!("<Left Alt>"), &mut self.graphics.hide_menu) {
+                    ui.open_popup(im_str!("Menu visibility information"));
+                }
+
+                ui.text(im_str!("Sampling"));
+                ui.same_line(pos);
                 let id = ui.push_id(im_str!("sampling"));
                 if ComboBox::new(im_str!("")).build_simple_string(
                     &ui,
@@ -174,28 +195,6 @@ impl Settings {
                 }
                 id.pop(&ui);
 
-                ui.text(im_str!("V-Sync"));
-                ui.same_line(pos);
-                let id = ui.push_id(im_str!("vsync"));
-                if ui.checkbox(im_str!(""), &mut self.graphics.vsync) {
-                    restart_popup = true;
-                }
-                id.pop(&ui);
-
-                ui.text(im_str!("Background"));
-                ui.same_line(pos);
-                let id = ui.push_id(im_str!("background"));
-                ui.checkbox(im_str!(""), &mut self.graphics.animated_background);
-                id.pop(&ui);
-
-                ui.text(im_str!("Hide menu"));
-                ui.same_line(pos);
-                let id = ui.push_id(im_str!("hide_menu"));
-                if ui.checkbox(im_str!(""), &mut self.graphics.hide_menu) {
-                    ui.open_popup(im_str!("Menu visibility information"));
-                }
-                id.pop(&ui);
-
                 if restart_popup {
                     ui.open_popup(im_str!("Restart needed"));
                 }
@@ -211,15 +210,19 @@ impl Settings {
                 ui.text(im_str!("Ghost piece"));
                 ui.same_line(pos);
                 let id = ui.push_id(im_str!("ghost_piece"));
-                Slider::new(im_str!(""), 0.0..=1.0)
-                    .display_format(im_str!("%.2f"))
-                    .build(&ui, &mut self.gameplay.ghost_piece_opacity);
+                Slider::new(im_str!(""), 0..=100).build(&ui, &mut self.gameplay.ghost_piece);
                 id.pop(&ui);
 
                 ui.text(im_str!("Block size"));
                 ui.same_line(pos);
                 let id = ui.push_id(im_str!("block_size"));
                 Slider::new(im_str!(""), 16..=44).build(&ui, &mut self.gameplay.block_size);
+                id.pop(&ui);
+
+                ui.text(im_str!("Clear delay"));
+                ui.same_line(pos);
+                let id = ui.push_id(im_str!("clear_delay"));
+                Slider::new(im_str!(""), 0..=2000).build(&ui, &mut self.gameplay.clear_delay);
                 id.pop(&ui);
 
                 ui.text(im_str!("Skin"));
@@ -247,29 +250,17 @@ impl Settings {
             ui.separator();
 
             {
-                ui.text(im_str!("Music volume"));
+                ui.text(im_str!("Music"));
                 ui.same_line(pos);
-                let id = ui.push_id(im_str!("music_volume"));
-                Slider::new(im_str!(""), 0.0..=1.0)
-                    .display_format(im_str!("%.2f"))
-                    .build(&ui, &mut self.audio.music_volume);
+                let id = ui.push_id(im_str!("music"));
+                Slider::new(im_str!(""), 0..=100).build(&ui, &mut self.audio.music_volume);
                 id.pop(&ui);
 
-                if self.audio.music_volume < 0.01 {
-                    self.audio.music_volume = 0.0;
-                }
-
-                ui.text(im_str!("SFX Volume"));
+                ui.text(im_str!("SFX"));
                 ui.same_line(pos);
-                let id = ui.push_id(im_str!("sfx_volume"));
-                Slider::new(im_str!(""), 0.0..=1.0)
-                    .display_format(im_str!("%.2f"))
-                    .build(&ui, &mut self.audio.sfx_volume);
+                let id = ui.push_id(im_str!("sfx"));
+                Slider::new(im_str!(""), 0..=100).build(&ui, &mut self.audio.sfx_volume);
                 id.pop(&ui);
-
-                if self.audio.sfx_volume < 0.01 {
-                    self.audio.sfx_volume = 0.0;
-                }
             }
 
             ui.separator();

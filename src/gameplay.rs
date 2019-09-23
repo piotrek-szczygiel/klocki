@@ -94,6 +94,10 @@ impl Gameplay {
         self.explosion = true;
     }
 
+    pub fn blocked(&self) -> bool {
+        self.matrix.blocked()
+    }
+
     pub fn action(&mut self, action: Action) {
         self.actions.push_front(action);
         self.replay.add(action, self.action_duration);
@@ -142,7 +146,10 @@ impl Gameplay {
                 }
             }
             Action::LockPiece => {
-                match self.matrix.lock(&self.piece) {
+                match self.matrix.lock(
+                    &self.piece,
+                    Duration::from_millis(g.settings.gameplay.clear_delay.into()),
+                ) {
                     Locked::Collision => {
                         if self.interactive {
                             self.action(Action::GameOver);
@@ -374,7 +381,7 @@ impl Gameplay {
             self.piece
                 .draw(ctx, position, &mut self.blocks, block_size, 1.0)?;
 
-            if g.settings.gameplay.ghost_piece_opacity > 0.0 {
+            if g.settings.gameplay.ghost_piece > 0 {
                 let mut ghost = self.piece.clone();
                 if ghost.fall(&self.matrix) >= ghost.grid().height {
                     ghost.draw(
@@ -382,7 +389,7 @@ impl Gameplay {
                         position,
                         &mut self.blocks,
                         block_size,
-                        g.settings.gameplay.ghost_piece_opacity,
+                        g.settings.gameplay.ghost_piece as f32 / 100.0,
                     )?;
                 }
             }

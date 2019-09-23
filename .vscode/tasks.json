@@ -10,9 +10,9 @@
             "problemMatcher": "$rustc"
         },
         {
-            "label": "build debug",
+            "label": "run",
             "type": "shell",
-            "command": "cargo build",
+            "command": "cargo run",
             "problemMatcher": "$rustc"
         }
     ]
