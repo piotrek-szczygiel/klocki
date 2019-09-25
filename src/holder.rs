@@ -46,13 +46,12 @@ impl Holder {
         block_size: i32,
         text_color: Color,
         font: Font,
-        scale: Scale,
     ) -> GameResult {
         let mut text = Text::new(TextFragment {
             text: "Hold".to_string(),
             color: Some(text_color),
             font: Some(font),
-            scale: Some(scale),
+            scale: Some(Scale::uniform(block_size as f32 * 2.0)),
         });
 
         text.set_bounds(

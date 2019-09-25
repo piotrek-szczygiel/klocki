@@ -162,15 +162,8 @@ impl Gameplay {
                             self.explode();
                             let t_spin = self.piece.t_spin(&self.matrix);
                             self.score.lock(rows, t_spin);
-                            self.popups.lock(
-                                rows,
-                                t_spin,
-                                self.score.btb(),
-                                self.score.combo(),
-                                (g.settings.gameplay.block_size * self.matrix.width) as f32,
-                                (g.settings.gameplay.block_size * self.matrix.height) as f32,
-                                g.settings.gameplay.block_size as f32,
-                            );
+                            self.popups
+                                .lock(rows, t_spin, self.score.btb(), self.score.combo());
                         } else {
                             self.score.reset_combo();
                         }
@@ -310,14 +303,24 @@ impl Gameplay {
         }
 
         if g.imgui_state.debug_t_spin_tower {
-            self.matrix.debug_tower();
+            self.matrix.debug_t_spin();
+        }
+
+        if g.imgui_state.debug_tetris_tower {
+            self.matrix.debug_tetris();
         }
 
         if g.settings_state.skin_switched {
             self.blocks = Blocks::new(g.settings.tileset(ctx, &g.settings_state)?);
         }
 
-        self.popups.update(ctx);
+        self.popups.update(
+            ctx,
+            (g.settings.gameplay.block_size * self.matrix.width) as f32,
+            (g.settings.gameplay.block_size * self.matrix.height) as f32,
+            g.settings.gameplay.block_size as f32,
+        )?;
+
         self.matrix.update(ctx, g, sfx);
 
         if self.game_over || self.matrix.blocked() || g.imgui_state.paused {
@@ -362,7 +365,6 @@ impl Gameplay {
             ui_block_size,
             ui_color,
             self.font,
-            ui_scale,
         )?;
 
         self.bag.draw(
@@ -372,7 +374,6 @@ impl Gameplay {
             ui_block_size,
             ui_color,
             self.font,
-            ui_scale,
         )?;
 
         self.score.draw(

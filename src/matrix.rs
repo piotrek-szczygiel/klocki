@@ -397,7 +397,22 @@ impl Matrix {
         self.game_over = true;
     }
 
-    pub fn debug_tower(&mut self) {
+    pub fn debug_tetris(&mut self) {
+        let mut bricks: Vec<(usize, usize)> = vec![];
+        for y in 24..40 {
+            for x in 0..9 {
+                bricks.push((y, x));
+            }
+        }
+
+        self.clear();
+
+        for (y, x) in bricks {
+            self.grid[y][x] = 5;
+        }
+    }
+
+    pub fn debug_t_spin(&mut self) {
         let mut bricks: Vec<(usize, usize)> = vec![
             (39, 0),
             (39, 1),

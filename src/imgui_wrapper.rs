@@ -6,7 +6,7 @@ use std::{
 use gfx_core::{handle::RenderTargetView, memory::Typed};
 use gfx_device_gl;
 use ggez::{event, filesystem, graphics, timer, Context};
-use imgui::{self, im_str, FontId, FontSource, ImString, StyleColor, Window};
+use imgui::{self, im_str, Condition, FontId, FontSource, ImString, StyleColor, Window};
 use imgui_gfx_renderer::{Renderer, Shaders};
 
 use crate::{global::Global, utils};
@@ -24,6 +24,7 @@ pub struct ImGuiState {
     pub restart: bool,
     pub game_over: bool,
     pub debug_t_spin_tower: bool,
+    pub debug_tetris_tower: bool,
     pub update_last: Duration,
     pub draw_last: Duration,
     pub update: Vec<Duration>,
@@ -44,14 +45,12 @@ pub struct ImGuiWrapper {
 }
 
 impl ImGuiWrapper {
-    fn load_font(imgui: &mut imgui::Context, ctx: &mut Context) -> (FontId, FontId) {
-        let regular = filesystem::open(ctx, utils::path(ctx, "fonts/regular.ttf"));
-        let bold = filesystem::open(ctx, utils::path(ctx, "fonts/bold.ttf"));
+    fn load_font(imgui: &mut imgui::Context, ctx: &mut Context, path: &str) -> Option<FontId> {
+        let regular = filesystem::open(ctx, utils::path(ctx, path));
 
         let mut regular_font = None;
-        let mut bold_font = None;
 
-        if let (Ok(mut regular), Ok(mut bold)) = (regular, bold) {
+        if let Ok(mut regular) = regular {
             let mut regular_bytes = vec![];
             if regular.read_to_end(&mut regular_bytes).is_ok() {
                 regular_font = Some(imgui.fonts().add_font(&[FontSource::TtfData {
@@ -60,28 +59,20 @@ impl ImGuiWrapper {
                     config: None,
                 }]));
             }
-
-            let mut bold_bytes = vec![];
-            if bold.read_to_end(&mut bold_bytes).is_ok() {
-                bold_font = Some(imgui.fonts().add_font(&[FontSource::TtfData {
-                    data: &bold_bytes,
-                    size_pixels: 16.0,
-                    config: None,
-                }]));
-            }
         }
 
-        if regular_font.is_none() || bold_font.is_none() {
+        if regular_font.is_none() {
             log::error!("Unable to load fonts");
         }
 
-        (regular_font.unwrap(), bold_font.unwrap())
+        regular_font
     }
 
     pub fn new(ctx: &mut Context) -> ImGuiWrapper {
         let mut imgui = imgui::Context::create();
 
-        let (regular_font, bold_font) = ImGuiWrapper::load_font(&mut imgui, ctx);
+        let regular_font = ImGuiWrapper::load_font(&mut imgui, ctx, "fonts/regular.ttf").unwrap();
+        let bold_font = ImGuiWrapper::load_font(&mut imgui, ctx, "fonts/bold.ttf").unwrap();
         let (factory, gfx_device, _, _, _) = graphics::gfx_objects(ctx);
 
         let shaders = {
@@ -199,8 +190,8 @@ impl ImGuiWrapper {
             let font_id = ui.push_font(self.regular_font);
             if self.show_debug_window {
                 Window::new(im_str!("Debug"))
-                    // .size([300.0, 400.0], Condition::Appearing)
-                    // .position([50.0, 50.0], Condition::Appearing)
+                    .size([0.0, 0.0], Condition::Appearing)
+                    .position([50.0, 50.0], Condition::Appearing)
                     .build(&ui, || {
                         ui.text(im_str!("Debugging window"));
                         ui.separator();
@@ -213,6 +204,9 @@ impl ImGuiWrapper {
 
                         g.imgui_state.debug_t_spin_tower =
                             ui.button(im_str!("T-Spin tower"), [0.0, 0.0]);
+
+                        g.imgui_state.debug_tetris_tower =
+                            ui.button(im_str!("Tetris tower"), [0.0, 0.0]);
 
                         ui.separator();
                         ui.text(im_str!("Window size: {}x{}", w, h));
