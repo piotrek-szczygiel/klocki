@@ -23,13 +23,16 @@ pub struct Matrix {
     pub width: i32,
     pub height: i32,
     pub vanish: i32,
-    grid: Grid,
-    grid_mesh: Option<(Mesh, i32)>,
 
     clearing: Option<Clearing>,
     destroyed_blocks: Vec<DestroyedBlock>,
     randomizer: Randomizer,
     game_over: bool,
+
+    grid: Grid,
+    grid_mesh: Option<(Mesh, i32)>,
+    block_size: i32,
+    update_grid: bool,
 }
 
 struct DestroyedBlock {
@@ -72,16 +75,18 @@ impl Matrix {
             width,
             height,
             vanish,
-            grid: vec![vec![0; width as usize]; (height + vanish) as usize],
-            grid_mesh: None,
             clearing: None,
             destroyed_blocks: vec![],
             randomizer: Randomizer::new(),
             game_over: false,
+            grid: vec![vec![0; width as usize]; (height + vanish) as usize],
+            grid_mesh: None,
+            block_size: 0,
+            update_grid: false,
         }
     }
 
-    pub fn build_grid(&mut self, ctx: &mut Context, block_size: i32) -> GameResult {
+    pub fn build_grid(&mut self, ctx: &mut Context) -> GameResult {
         let grid_mesh = &mut MeshBuilder::new();
         let grid_color = Color::new(0.5, 0.5, 0.5, 1.0);
         let outline_color = Color::new(0.2, 1.0, 0.8, 0.8);
@@ -92,8 +97,8 @@ impl Matrix {
             Rect::new(
                 0.0,
                 0.0,
-                (self.width * block_size) as f32,
-                (self.height * block_size) as f32,
+                (self.width * self.block_size) as f32,
+                (self.height * self.block_size) as f32,
             ),
             background_color,
         );
@@ -109,10 +114,10 @@ impl Matrix {
                 grid_mesh.rectangle(
                     DrawMode::stroke(1.0),
                     Rect::new(
-                        (x * block_size) as f32,
-                        (y * block_size) as f32,
-                        block_size as f32,
-                        block_size as f32,
+                        (x * self.block_size) as f32,
+                        (y * self.block_size) as f32,
+                        self.block_size as f32,
+                        self.block_size as f32,
                     ),
                     grid_color,
                 );
@@ -124,13 +129,13 @@ impl Matrix {
             Rect::new(
                 0.0,
                 0.0,
-                (self.width * block_size) as f32,
-                (self.height * block_size) as f32,
+                (self.width * self.block_size) as f32,
+                (self.height * self.block_size) as f32,
             ),
             outline_color,
         );
 
-        self.grid_mesh = Some((grid_mesh.build(ctx)?, block_size));
+        self.grid_mesh = Some((grid_mesh.build(ctx)?, self.block_size));
 
         Ok(())
     }
@@ -140,6 +145,7 @@ impl Matrix {
     }
 
     pub fn clear(&mut self) {
+        self.update_grid = true;
         self.grid = vec![vec![0; self.width as usize]; (self.height + self.vanish) as usize]
     }
 
@@ -169,6 +175,7 @@ impl Matrix {
     }
 
     pub fn lock(&mut self, piece: &Piece, clear_delay: Duration) -> Locked {
+        self.update_grid = true;
         let mut collision = self.collision(&piece);
 
         let grid = piece.grid();
@@ -199,7 +206,7 @@ impl Matrix {
         self.clearing.is_some()
     }
 
-    pub fn update(&mut self, ctx: &mut Context, g: &mut Global, sfx: bool) {
+    pub fn update(&mut self, ctx: &mut Context, g: &mut Global, sfx: bool) -> GameResult {
         let mut clear = vec![];
 
         if let Some(clearing) = &mut self.clearing {
@@ -246,6 +253,13 @@ impl Matrix {
 
         self.destroyed_blocks
             .retain(|block| block.visible < block.lifetime);
+
+        if self.update_grid {
+            self.build_grid(ctx)?;
+            self.update_grid = false;
+        }
+
+        Ok(())
     }
 
     pub fn draw(
@@ -255,7 +269,11 @@ impl Matrix {
         blocks: &mut Blocks,
         block_size: i32,
     ) -> GameResult {
-        self.build_grid(ctx, block_size)?;
+        if self.block_size != block_size {
+            self.block_size = block_size;
+            self.update_grid = true;
+            self.build_grid(ctx)?;
+        }
 
         blocks.clear();
 

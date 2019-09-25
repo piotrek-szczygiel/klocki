@@ -297,7 +297,7 @@ impl Gameplay {
         };
     }
 
-    pub fn update(&mut self, ctx: &mut Context, g: &mut Global, sfx: bool) -> GameResult<()> {
+    pub fn update(&mut self, ctx: &mut Context, g: &mut Global, sfx: bool) -> GameResult {
         if g.imgui_state.game_over {
             self.action(Action::GameOver, true);
         }
@@ -321,7 +321,7 @@ impl Gameplay {
             g.settings.gameplay.block_size as f32,
         )?;
 
-        self.matrix.update(ctx, g, sfx);
+        self.matrix.update(ctx, g, sfx)?;
 
         if self.game_over || self.matrix.blocked() || g.imgui_state.paused {
             return Ok(());

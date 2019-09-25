@@ -77,7 +77,7 @@ impl Game {
         let gameplay = Gameplay::new(ctx, &mut g, true, &seed)?;
 
         let rect = graphics::screen_coordinates(ctx);
-        let particle_animation = ParticleAnimation::new(130, 200.0, 80.0, rect.w, rect.h);
+        let particle_animation = ParticleAnimation::new(75, 200.0, 80.0, rect.w, rect.h);
 
         let mut music = audio::Source::new(ctx, utils::path(ctx, "chiptronical.ogg"))?;
         music.set_repeat(true);
