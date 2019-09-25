@@ -81,7 +81,7 @@ impl Settings {
                 gameplay: Gameplay {
                     block_size: 32,
                     ghost_piece: 10,
-                    clear_delay: 0,
+                    clear_delay: 250,
                     skin: String::from("default.png"),
                 },
                 audio: Audio {

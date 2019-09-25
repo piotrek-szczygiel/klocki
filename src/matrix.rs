@@ -59,7 +59,7 @@ impl Randomizer {
             uniform_vx: Uniform::new(-7.5, 7.5),
             normal_vy: Normal::new(-10.0, 5.0).unwrap(),
             uniform_vr: Uniform::new(-8.0 * std::f32::consts::PI, 8.0 * std::f32::consts::PI),
-            uniform_lifetime: Uniform::new(250, 500),
+            uniform_lifetime: Uniform::new(250, 750),
         }
     }
 }
@@ -380,6 +380,7 @@ impl Matrix {
     }
 
     fn collapse_rows(&mut self, rows: &[i32]) {
+        self.update_grid = true;
         let mut rng = rand::thread_rng();
 
         for &row in rows {

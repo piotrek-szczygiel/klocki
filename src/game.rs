@@ -162,7 +162,9 @@ impl EventHandler for Game {
 
         match &mut self.replay {
             Some(replay) => {
-                replay.update(ctx);
+                if !replay.gameplay.paused() && !self.g.imgui_state.paused {
+                    replay.update(ctx);
+                }
                 gameplay = &mut replay.gameplay;
             }
             None => {

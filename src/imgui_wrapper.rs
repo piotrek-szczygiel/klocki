@@ -229,6 +229,8 @@ impl ImGuiWrapper {
                 Window::new(im_str!("Game over"))
                     .opened(&mut opened)
                     .resizable(false)
+                    .size([120.0, 180.0], Condition::Appearing)
+                    .position([w / 2.0 - 60.0, h / 3.0 * 2.0], Condition::Appearing)
                     .collapsible(false)
                     .build(&ui, || {
                         ui.text(im_str!("Score: {}", g.imgui_state.replay_score));

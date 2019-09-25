@@ -6,6 +6,7 @@ use ggez::{
     timer, Context, GameResult,
 };
 
+use crate::popups::Popup;
 use crate::{
     action::Action,
     bag::Bag,
@@ -42,6 +43,8 @@ pub struct Gameplay {
     blocks: Blocks,
 
     explosion: bool,
+    countdown: Option<i32>,
+    countdown_switch: Duration,
 }
 
 impl Gameplay {
@@ -83,6 +86,8 @@ impl Gameplay {
             font,
             blocks,
             explosion: false,
+            countdown: Some(4),
+            countdown_switch: Duration::new(0, 0),
         })
     }
 
@@ -130,6 +135,10 @@ impl Gameplay {
         self.game_over
     }
 
+    pub fn paused(&self) -> bool {
+        self.game_over || self.countdown.is_some() || self.matrix.blocked()
+    }
+
     fn process_action(&mut self, g: &mut Global, action: Action, sfx: bool) -> bool {
         match action {
             Action::HoldPiece => {
@@ -162,8 +171,13 @@ impl Gameplay {
                             self.explode();
                             let t_spin = self.piece.t_spin(&self.matrix);
                             self.score.lock(rows, t_spin);
-                            self.popups
-                                .lock(rows, t_spin, self.score.btb(), self.score.combo());
+                            self.popups.lock(
+                                rows,
+                                t_spin,
+                                self.score.btb(),
+                                self.score.combo(),
+                                g.settings.gameplay.clear_delay.into(),
+                            );
                         } else {
                             self.score.reset_combo();
                         }
@@ -200,6 +214,10 @@ impl Gameplay {
                 self.game_over = true;
                 self.matrix.game_over();
                 self.explode();
+
+                let mut popup = Popup::new(Duration::from_secs(10));
+                popup.add("Game Over", Color::new(0.9, 0.1, 0.2, 1.0), 4.0);
+                self.popups.add(popup);
 
                 if sfx {
                     g.sfx.play("gameover");
@@ -314,6 +332,37 @@ impl Gameplay {
             self.blocks = Blocks::new(g.settings.tileset(ctx, &g.settings_state)?);
         }
 
+        if let Some(countdown) = self.countdown.as_mut() {
+            if *countdown == 4 {
+                self.countdown_switch = Duration::from_secs(1);
+            }
+
+            self.countdown_switch += timer::delta(ctx);
+            if self.countdown_switch >= Duration::from_secs(1) {
+                self.countdown_switch = Duration::new(0, 0);
+                *countdown -= 1;
+
+                let mut text = countdown.to_string();
+
+                if sfx {
+                    if *countdown == 0 {
+                        g.sfx.play("go");
+                    } else {
+                        g.sfx.play("countdown");
+                    }
+                }
+
+                if *countdown == 0 {
+                    self.countdown = None;
+                    text = String::from("Go!");
+                }
+
+                let mut popup = Popup::new(Duration::from_secs(2));
+                popup.add(&text, Color::new(0.8, 0.9, 1.0, 1.0), 4.0);
+                self.popups.add(popup);
+            }
+        }
+
         self.popups.update(
             ctx,
             (g.settings.gameplay.block_size * self.matrix.width) as f32,
@@ -323,7 +372,7 @@ impl Gameplay {
 
         self.matrix.update(ctx, g, sfx)?;
 
-        if self.game_over || self.matrix.blocked() || g.imgui_state.paused {
+        if self.paused() || g.imgui_state.paused {
             return Ok(());
         }
 

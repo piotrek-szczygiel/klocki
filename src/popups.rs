@@ -10,7 +10,7 @@ use ggez::{
 use crate::utils;
 
 #[derive(Default)]
-struct Popup {
+pub struct Popup {
     canvas: Option<Canvas>,
     fragments: Vec<PopupFragment>,
     visible: Duration,
@@ -144,23 +144,42 @@ impl Popup {
     }
 }
 
-#[derive(Default)]
 pub struct Popups {
     active_popup: Option<Popup>,
     fading_popups: Vec<Popup>,
     font: Font,
+    just_created: bool,
 }
 
 impl Popups {
     pub fn new(ctx: &mut Context) -> GameResult<Popups> {
         Ok(Popups {
+            active_popup: None,
+            fading_popups: vec![],
             font: Font::new(ctx, utils::path(ctx, "fonts/bold.ttf"))?,
-            ..Default::default()
+            just_created: true,
         })
     }
 
-    pub fn lock(&mut self, rows: i32, t_spin: bool, btb: bool, combo: Option<i32>) {
-        let mut popup = Popup::new(Duration::from_millis(1500));
+    pub fn add(&mut self, popup: Popup) {
+        let mut popup = Some(popup);
+        std::mem::swap(&mut popup, &mut self.active_popup);
+
+        if let Some(mut popup) = popup {
+            if popup.hide < 0.5 {
+                popup.visible = popup.lifetime / 2;
+            }
+            self.fading_popups.push(popup);
+        }
+    }
+
+    pub fn lock(&mut self, rows: i32, t_spin: bool, btb: bool, combo: Option<i32>, delay: u64) {
+        let mut lifetime = delay;
+        if lifetime < 250 {
+            lifetime = 250;
+        }
+
+        let mut popup = Popup::new(Duration::from_millis(lifetime * 2));
 
         if t_spin {
             popup.add("T-Spin\n", Color::new(1.0, 0.5, 0.9, 1.0), 4.0);
@@ -196,19 +215,16 @@ impl Popups {
             }
         }
 
-        let mut popup = Some(popup);
-        std::mem::swap(&mut popup, &mut self.active_popup);
-
-        if let Some(mut popup) = popup {
-            if popup.hide < 0.5 {
-                popup.visible = popup.lifetime / 2;
-            }
-            self.fading_popups.push(popup);
-        }
+        self.add(popup);
     }
 
     pub fn update(&mut self, ctx: &mut Context, width: f32, height: f32, scale: f32) -> GameResult {
         let dt = timer::delta(ctx);
+
+        if self.just_created {
+            self.just_created = false;
+            return Ok(());
+        }
 
         let mut fading = false;
         if let Some(p) = self.active_popup.as_mut() {

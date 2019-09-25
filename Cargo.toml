@@ -1,6 +1,6 @@
 [package]
 name = "klocki"
-version = "0.1.2"
+version = "0.1.4"
 authors = ["Piotr Szczygieł <szczygiel.p@gmail.com>"]
 edition = "2018"
 
