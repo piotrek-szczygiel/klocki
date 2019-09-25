@@ -2,7 +2,7 @@ use ggez::{self, nalgebra::Point2, Context, GameResult};
 
 use crate::{
     blocks::Blocks,
-    matrix::{self, Matrix},
+    matrix::Matrix,
     shape::{Shape, ShapeGrid, ShapeType},
 };
 
@@ -23,7 +23,7 @@ pub struct Piece {
 }
 
 impl Piece {
-    pub fn new(shape_type: ShapeType) -> Piece {
+    pub fn new(shape_type: ShapeType, matrix: &Matrix) -> Piece {
         let mut piece = Piece {
             shape: Shape::new(shape_type),
             x: 0,
@@ -32,11 +32,11 @@ impl Piece {
             last_movement: Movement::None,
         };
 
-        piece.reset();
+        piece.reset(&matrix);
         piece
     }
 
-    pub fn t_spin(&self, matrix: &matrix::Grid) -> bool {
+    pub fn t_spin(&self, matrix: &Matrix) -> bool {
         if self.shape.shape_type != ShapeType::T || self.last_movement != Movement::Rotate {
             return false;
         }
@@ -47,35 +47,33 @@ impl Piece {
 
         let mut occupied = 0;
 
-        let last_horizontal = matrix::WIDTH as usize - 1;
-        let last_vertical = (matrix::HEIGHT + matrix::VANISH) as usize - 1;
+        let last_horizontal = matrix.width as usize - 1;
+        let last_vertical = (matrix.height + matrix.vanish) as usize - 1;
+
+        let matrix = matrix.grid();
 
         if x == 0 || matrix[y - 1][x - 1] != 0 {
-            log::trace!("1");
             occupied += 1;
         }
 
         if x == last_horizontal || matrix[y - 1][x + 1] != 0 {
-            log::trace!("2");
             occupied += 1;
         }
 
         if x == 0 || y == last_vertical || matrix[y + 1][x - 1] != 0 {
-            log::trace!("3");
             occupied += 1;
         }
 
         if x == last_horizontal || y == last_vertical || matrix[y + 1][x + 1] != 0 {
-            log::trace!("4");
             occupied += 1;
         }
 
         occupied >= 3
     }
 
-    pub fn reset(&mut self) {
-        self.x = (matrix::WIDTH as f32 / 2.0 - self.shape.grids[0].width as f32 / 2.0) as i32;
-        self.y = matrix::VANISH - self.shape.grids[0].height - self.shape.grids[0].offset_y;
+    pub fn reset(&mut self, matrix: &Matrix) {
+        self.x = (matrix.width as f32 / 2.0 - self.shape.grids[0].width as f32 / 2.0) as i32;
+        self.y = matrix.vanish - self.shape.grids[0].height - self.shape.grids[0].offset_y;
         self.rotation = 0;
         self.last_movement = Movement::None;
     }
@@ -157,6 +155,7 @@ impl Piece {
         &self,
         ctx: &mut Context,
         position: Point2<f32>,
+        vanish: i32,
         blocks: &mut Blocks,
         block_size: i32,
         alpha: f32,
@@ -165,7 +164,7 @@ impl Piece {
 
         let position = Point2::new(
             position[0] + (self.x * block_size) as f32,
-            position[1] + ((self.y - matrix::VANISH) * block_size) as f32,
+            position[1] + ((self.y - vanish) * block_size) as f32,
         );
 
         self.shape

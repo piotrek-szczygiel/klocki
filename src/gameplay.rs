@@ -12,7 +12,7 @@ use crate::{
     blocks::Blocks,
     global::Global,
     holder::Holder,
-    matrix::{self, Locked, Matrix},
+    matrix::{Locked, Matrix},
     piece::Piece,
     popups::Popups,
     replay::ReplayData,
@@ -27,7 +27,7 @@ pub struct Gameplay {
     actions: VecDeque<Action>,
     replay: ReplayData,
 
-    matrix: Matrix,
+    pub matrix: Matrix,
     bag: Bag,
     piece: Piece,
     holder: Holder,
@@ -54,13 +54,13 @@ impl Gameplay {
         let actions = VecDeque::new();
         let replay = ReplayData::new(seed);
 
-        let matrix = Matrix::new();
+        let matrix = Matrix::new(10, 20, 20);
 
         let mut bag = Bag::new(seed);
-        let piece = Piece::new(bag.pop());
+        let piece = Piece::new(bag.pop(), &matrix);
         let holder = Holder::default();
         let score = Score::default();
-        let popups = Popups::default();
+        let popups = Popups::new(ctx)?;
 
         let font = Font::new(ctx, utils::path(ctx, "fonts/bold.ttf"))?;
 
@@ -96,10 +96,6 @@ impl Gameplay {
 
     pub fn explode(&mut self) {
         self.explosion = true;
-    }
-
-    pub fn blocked(&self) -> bool {
-        self.matrix.blocked()
     }
 
     pub fn action(&mut self, action: Action, immediate: bool) {
@@ -138,7 +134,7 @@ impl Gameplay {
         match action {
             Action::HoldPiece => {
                 if let Some(shape) = self.holder.hold(self.piece.shape(), &mut self.bag) {
-                    self.piece = Piece::new(shape);
+                    self.piece = Piece::new(shape, &self.matrix);
                     if sfx {
                         g.sfx.play("hold");
                     }
@@ -164,16 +160,23 @@ impl Gameplay {
                     Locked::Success(rows) => {
                         if rows > 0 {
                             self.explode();
-                            let t_spin = self.piece.t_spin(&self.matrix.grid());
+                            let t_spin = self.piece.t_spin(&self.matrix);
                             self.score.lock(rows, t_spin);
-                            self.popups
-                                .lock(rows, t_spin, self.score.btb(), self.score.combo());
+                            self.popups.lock(
+                                rows,
+                                t_spin,
+                                self.score.btb(),
+                                self.score.combo(),
+                                (g.settings.gameplay.block_size * self.matrix.width) as f32,
+                                (g.settings.gameplay.block_size * self.matrix.height) as f32,
+                                g.settings.gameplay.block_size as f32,
+                            );
                         } else {
                             self.score.reset_combo();
                         }
 
                         if sfx {
-                            match (rows, self.piece.t_spin(&self.matrix.grid())) {
+                            match (rows, self.piece.t_spin(&self.matrix)) {
                                 (1, false) => g.sfx.play("erase1"),
                                 (2, false) => g.sfx.play("erase2"),
                                 (3, false) => g.sfx.play("erase3"),
@@ -186,7 +189,7 @@ impl Gameplay {
                             }
                         }
 
-                        self.piece = Piece::new(self.bag.pop());
+                        self.piece = Piece::new(self.bag.pop(), &self.matrix);
                         if self.matrix.collision(&self.piece) && self.interactive {
                             self.action(Action::GameOver, true);
                         } else {
@@ -314,7 +317,9 @@ impl Gameplay {
             self.blocks = Blocks::new(g.settings.tileset(ctx, &g.settings_state)?);
         }
 
+        self.popups.update(ctx);
         self.matrix.update(ctx, g, sfx);
+
         if self.game_over || self.matrix.blocked() || g.imgui_state.paused {
             return Ok(());
         }
@@ -329,8 +334,6 @@ impl Gameplay {
                 break;
             }
         }
-
-        self.popups.update(ctx);
 
         if self.interactive {
             self.still += timer::delta(ctx);
@@ -348,38 +351,39 @@ impl Gameplay {
     pub fn draw(&mut self, ctx: &mut Context, g: &Global, position: Point2<f32>) -> GameResult<()> {
         let block_size = g.settings.gameplay.block_size;
 
-        let ui_block_size = ((block_size * 3) as f32 / 4.0) as i32;
+        let ui_block_size = block_size / 2;
         let ui_color = Color::new(0.8, 0.9, 1.0, 0.8);
-        let ui_font = self.font;
-        let ui_scale = Scale::uniform(ui_block_size as f32);
+        let ui_scale = Scale::uniform(block_size as f32);
 
         self.holder.draw(
             ctx,
-            position + Vector2::new(-3.25 * ui_block_size as f32, 0.0),
+            position + Vector2::new(-6.0 * ui_block_size as f32, 0.0),
             &mut self.blocks,
             ui_block_size,
             ui_color,
-            ui_font,
+            self.font,
+            ui_scale,
         )?;
 
         self.bag.draw(
             ctx,
-            position + Vector2::new(((matrix::WIDTH + 1) * block_size) as f32, 0.0),
+            position + Vector2::new((self.matrix.width * block_size) as f32, 0.0),
             &mut self.blocks,
             ui_block_size,
             ui_color,
-            ui_font,
+            self.font,
+            ui_scale,
         )?;
 
         self.score.draw(
             ctx,
             position
                 + Vector2::new(
-                    block_size as f32 * (matrix::WIDTH + 1) as f32,
-                    block_size as f32 * (matrix::HEIGHT - 2) as f32,
+                    (block_size * self.matrix.width) as f32 + ui_block_size as f32,
+                    (block_size * self.matrix.height) as f32 - ui_scale.y * 3.0,
                 ),
             ui_color,
-            ui_font,
+            self.font,
             ui_scale,
         )?;
 
@@ -391,8 +395,14 @@ impl Gameplay {
             .draw(ctx, position, &mut self.blocks, block_size)?;
 
         if !self.game_over {
-            self.piece
-                .draw(ctx, position, &mut self.blocks, block_size, 1.0)?;
+            self.piece.draw(
+                ctx,
+                position,
+                self.matrix.vanish,
+                &mut self.blocks,
+                block_size,
+                1.0,
+            )?;
 
             if g.settings.gameplay.ghost_piece > 0 {
                 let mut ghost = self.piece.clone();
@@ -400,6 +410,7 @@ impl Gameplay {
                     ghost.draw(
                         ctx,
                         position,
+                        self.matrix.vanish,
                         &mut self.blocks,
                         block_size,
                         g.settings.gameplay.ghost_piece as f32 / 100.0,
@@ -408,16 +419,8 @@ impl Gameplay {
             }
         }
 
-        self.popups.draw(
-            ctx,
-            position
-                + Vector2::new(
-                    -ui_block_size as f32 * 10.0 - block_size as f32,
-                    matrix::HEIGHT as f32 / 3.0 * block_size as f32,
-                ),
-            ui_font,
-            ui_block_size as f32,
-        )?;
+        self.popups
+            .draw(ctx, position, (block_size * self.matrix.height) as f32)?;
 
         Ok(())
     }

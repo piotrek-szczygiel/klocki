@@ -105,12 +105,15 @@ impl Score {
         font: Font,
         scale: Scale,
     ) -> GameResult {
-        let text = Text::new(TextFragment {
-            text: format!("Score: {}", self.score),
+        let mut text = Text::new(TextFragment {
+            text: "Score\n".into(),
             color: Some(color),
             font: Some(font),
-            scale: Some(scale),
+            scale: Some(Scale::uniform(scale.x * 1.5)),
         });
+
+        text.add(TextFragment::from(format!("{}", self.score)));
+        text.set_font(font, scale);
 
         graphics::draw(ctx, &text, DrawParam::new().dest(position))?;
 

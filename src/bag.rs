@@ -14,6 +14,7 @@ use crate::{
     blocks::Blocks,
     shape::{self, Shape, ShapeType},
 };
+use ggez::graphics::Align;
 
 pub struct Bag {
     bag: VecDeque<ShapeType>,
@@ -51,27 +52,29 @@ impl Bag {
         block_size: i32,
         text_color: Color,
         font: Font,
+        scale: Scale,
     ) -> GameResult {
-        let text = Text::new(TextFragment {
+        let mut text = Text::new(TextFragment {
             text: "Next".to_string(),
             color: Some(text_color),
             font: Some(font),
-            scale: Some(Scale::uniform(block_size as f32)),
+            scale: Some(scale),
         });
 
-        graphics::draw(
-            ctx,
-            &text,
-            DrawParam::new().dest(position + Vector2::new(block_size as f32 * 0.7, 0.0)),
-        )?;
+        text.set_bounds(
+            Point2::new(block_size as f32 * 6.0, block_size as f32),
+            Align::Center,
+        );
 
-        let position = position + Vector2::new(0.0, block_size as f32 * 2.0);
+        graphics::draw(ctx, &text, DrawParam::new().dest(position))?;
+
+        let position = position + Vector2::new(0.0, block_size as f32 * 2.5);
 
         for (i, &shape) in self.peek(6).enumerate() {
             let shape = Shape::new(shape);
             let position = position
                 + Vector2::new(
-                    block_size as f32 * 2.0 - shape.grids[0].width as f32 * block_size as f32 / 2.0,
+                    block_size as f32 * 3.0 - shape.grids[0].width as f32 * block_size as f32 / 2.0,
                     (i as i32 * block_size * 3) as f32,
                 );
             shape.draw(ctx, 0, position, blocks, block_size, 0.9)?;

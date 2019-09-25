@@ -22,7 +22,6 @@ use crate::{
     global::Global,
     imgui_wrapper::ImGuiWrapper,
     input::Input,
-    matrix,
     particles::ParticleAnimation,
     replay::{Replay, ReplayData},
     utils,
@@ -167,7 +166,7 @@ impl EventHandler for Game {
                 gameplay = &mut replay.gameplay;
             }
             None => {
-                if !gameplay.blocked() {
+                if !gameplay.matrix.blocked() {
                     self.input
                         .update(ctx, self.g.settings.input.das, self.g.settings.input.arr);
                     gameplay.actions(&self.input.actions());
@@ -213,8 +212,8 @@ impl EventHandler for Game {
 
         graphics::clear(ctx, graphics::WHITE);
 
-        let coords = graphics::screen_coordinates(ctx);
-        let ratio = coords.w / coords.h;
+        let screen = graphics::screen_coordinates(ctx);
+        let ratio = screen.w / screen.h;
 
         graphics::draw(
             ctx,
@@ -233,10 +232,12 @@ impl EventHandler for Game {
             self.particle_animation.draw(ctx)?;
         }
 
-        let coords = graphics::screen_coordinates(ctx);
+        let screen = graphics::screen_coordinates(ctx);
         let position_center = Point2::new(
-            (coords.w - (matrix::WIDTH * self.g.settings.gameplay.block_size) as f32) / 2.0,
-            (coords.h - (matrix::HEIGHT * self.g.settings.gameplay.block_size) as f32) / 2.0,
+            (screen.w - (self.gameplay.matrix.width * self.g.settings.gameplay.block_size) as f32)
+                / 2.0,
+            (screen.h - (self.gameplay.matrix.height * self.g.settings.gameplay.block_size) as f32)
+                / 2.0,
         );
 
         let gameplay = if let Some(replay) = &mut self.replay {

@@ -1,4 +1,5 @@
 use ggez::{
+    graphics::Align,
     graphics::{self, Color, DrawParam, Font, Scale, Text, TextFragment},
     nalgebra::{Point2, Vector2},
     Context, GameResult,
@@ -45,25 +46,30 @@ impl Holder {
         block_size: i32,
         text_color: Color,
         font: Font,
+        scale: Scale,
     ) -> GameResult {
-        let text = Text::new(TextFragment {
+        let mut text = Text::new(TextFragment {
             text: "Hold".to_string(),
             color: Some(text_color),
             font: Some(font),
-            scale: Some(Scale::uniform(block_size as f32)),
+            scale: Some(scale),
         });
 
-        graphics::draw(
-            ctx,
-            &text,
-            DrawParam::new().dest(position - Vector2::new(block_size as f32 * 1.3, 0.0)),
-        )?;
+        text.set_bounds(
+            Point2::new(block_size as f32 * 6.0, block_size as f32),
+            Align::Center,
+        );
 
-        let position = position + Vector2::new(0.0, block_size as f32 * 2.0);
+        graphics::draw(ctx, &text, DrawParam::new().dest(position))?;
+
+        let position = position + Vector2::new(0.0, block_size as f32 * 2.5);
 
         if let Some(shape) = &self.shape {
             let position = position
-                + Vector2::new(-shape.grids[0].width as f32 * block_size as f32 / 2.0, 0.0);
+                + Vector2::new(
+                    block_size as f32 * 3.0 - shape.grids[0].width as f32 * block_size as f32 / 2.0,
+                    0.0,
+                );
             shape.draw(ctx, 0, position, blocks, block_size, 1.0)?;
         }
 
