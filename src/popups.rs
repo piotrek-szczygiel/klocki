@@ -77,12 +77,12 @@ impl Popup {
 
         let screen = graphics::screen_coordinates(ctx);
 
-        const SHADOW_OFFSET: f32 = 5.0;
+        let shadow_offset = scale / 8.0;
 
         let canvas = Some(Canvas::new(
             ctx,
-            (screen.w + SHADOW_OFFSET) as u16,
-            (screen.h + SHADOW_OFFSET) as u16,
+            (screen.w + shadow_offset) as u16,
+            (screen.h + shadow_offset) as u16,
             NumSamples::One,
         )?);
 
@@ -91,7 +91,7 @@ impl Popup {
         graphics::draw(
             ctx,
             &shadow,
-            DrawParam::default().dest(Point2::new(SHADOW_OFFSET, SHADOW_OFFSET)),
+            DrawParam::default().dest(Point2::new(shadow_offset, shadow_offset)),
         )?;
         graphics::draw(ctx, &text, DrawParam::default())?;
         graphics::set_canvas(ctx, None);
