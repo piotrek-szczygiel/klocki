@@ -4,7 +4,7 @@ use ggez::{
     Context, GameResult,
 };
 
-pub const BLOCKS_NUM: usize = 8;
+pub const BLOCKS_NUM: usize = 10;
 
 pub struct Blocks {
     batch: SpriteBatch,
@@ -53,19 +53,13 @@ impl Blocks {
         let scale = size as f32 / self.tileset_size as f32;
         let scale = Vector2::new(scale, scale);
 
-        match block_id {
-            1..=BLOCKS_NUM => {
-                self.batch.add(
-                    DrawParam::new()
-                        .src(self.rects[block_id - 1])
-                        .dest(dest)
-                        .scale(scale)
-                        .color(Color::new(1.0, 1.0, 1.0, alpha)),
-                );
-            }
-            0 => (),
-            _ => log::error!("Attempt to draw a non-existing block: {}", block_id),
-        }
+        self.batch.add(
+            DrawParam::new()
+                .src(self.rects[block_id])
+                .dest(dest)
+                .scale(scale)
+                .color(Color::new(1.0, 1.0, 1.0, alpha)),
+        );
     }
 
     pub fn add_destroyed(&mut self, block_id: usize, size: i32, params: DrawParam) {

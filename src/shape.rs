@@ -72,18 +72,18 @@ impl ShapeGrid {
 
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub enum ShapeType {
-    Z = 1,
+    I = 1,
+    J,
     L,
     O,
     S,
-    I,
-    J,
     T,
+    Z,
 }
 
 pub fn all_shape_types() -> Vec<ShapeType> {
     use ShapeType::*;
-    vec![Z, L, O, S, I, J, T]
+    vec![I, J, L, O, S, T, Z]
 }
 
 #[derive(Clone)]
