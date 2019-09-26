@@ -87,10 +87,13 @@ impl Matrix {
     }
 
     pub fn build_grid(&mut self, ctx: &mut Context) -> GameResult {
-        let grid_mesh = &mut MeshBuilder::new();
-        let grid_color = Color::new(0.5, 0.5, 0.5, 1.0);
-        let outline_color = Color::new(0.2, 1.0, 0.8, 0.8);
-        let background_color = Color::new(0.03, 0.04, 0.05, 0.95);
+        let mut grid_mesh = MeshBuilder::new();
+
+        let grid_color = Color::new(0.1, 0.1, 0.1, 0.5);
+        let outline_color = Color::new(0.8, 0.9, 1.0, 0.8);
+        let background_color = Color::new(0.02, 0.03, 0.04, 0.95);
+
+        let outline_width = 4.0;
 
         grid_mesh.rectangle(
             DrawMode::fill(),
@@ -124,8 +127,110 @@ impl Matrix {
             }
         }
 
+        for y in self.vanish..self.vanish + self.height {
+            for x in 0..self.width {
+                if self.grid[y as usize][x as usize] == 0 {
+                    continue;
+                }
+
+                let mut up = false;
+                let mut down = false;
+                let mut left = false;
+                let mut right = false;
+
+                if y == self.vanish || self.grid[y as usize - 1][x as usize] == 0 {
+                    up = true;
+                }
+
+                if y == self.vanish + self.height - 1 || self.grid[y as usize + 1][x as usize] == 0
+                {
+                    down = true;
+                }
+
+                if x == 0 || self.grid[y as usize][x as usize - 1] == 0 {
+                    left = true;
+                }
+
+                if x == self.width - 1 || self.grid[y as usize][x as usize + 1] == 0 {
+                    right = true;
+                }
+
+                let y = y - self.vanish;
+
+                let corner = 1.0;
+
+                if up {
+                    grid_mesh.line(
+                        &[
+                            Point2::new(
+                                (x * self.block_size) as f32 - corner,
+                                (y * self.block_size) as f32,
+                            ),
+                            Point2::new(
+                                ((x + 1) * self.block_size) as f32 + corner,
+                                (y * self.block_size) as f32,
+                            ),
+                        ],
+                        outline_width,
+                        outline_color,
+                    )?;
+                }
+
+                if down {
+                    grid_mesh.line(
+                        &[
+                            Point2::new(
+                                (x * self.block_size) as f32 - corner,
+                                ((y + 1) * self.block_size) as f32,
+                            ),
+                            Point2::new(
+                                ((x + 1) * self.block_size) as f32 + corner,
+                                ((y + 1) * self.block_size) as f32,
+                            ),
+                        ],
+                        outline_width,
+                        outline_color,
+                    )?;
+                }
+
+                if left {
+                    grid_mesh.line(
+                        &[
+                            Point2::new(
+                                (x * self.block_size) as f32,
+                                (y * self.block_size) as f32 - corner,
+                            ),
+                            Point2::new(
+                                (x * self.block_size) as f32,
+                                ((y + 1) * self.block_size) as f32 + corner,
+                            ),
+                        ],
+                        outline_width,
+                        outline_color,
+                    )?;
+                }
+
+                if right {
+                    grid_mesh.line(
+                        &[
+                            Point2::new(
+                                ((x + 1) * self.block_size) as f32,
+                                (y * self.block_size) as f32 - corner,
+                            ),
+                            Point2::new(
+                                ((x + 1) * self.block_size) as f32,
+                                ((y + 1) * self.block_size) as f32 + corner,
+                            ),
+                        ],
+                        outline_width,
+                        outline_color,
+                    )?;
+                }
+            }
+        }
+
         grid_mesh.rectangle(
-            DrawMode::stroke(2.0),
+            DrawMode::stroke(outline_width),
             Rect::new(
                 0.0,
                 0.0,
