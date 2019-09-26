@@ -168,7 +168,7 @@ impl EventHandler for Game {
                 gameplay = &mut replay.gameplay;
             }
             None => {
-                if !gameplay.matrix.blocked() {
+                if !gameplay.stack.blocked() {
                     self.input
                         .update(ctx, self.g.settings.input.das, self.g.settings.input.arr);
                     gameplay.actions(&self.input.actions());
@@ -236,9 +236,9 @@ impl EventHandler for Game {
 
         let screen = graphics::screen_coordinates(ctx);
         let position_center = Point2::new(
-            (screen.w - (self.gameplay.matrix.width * self.g.settings.gameplay.block_size) as f32)
+            (screen.w - (self.gameplay.stack.width * self.g.settings.gameplay.block_size) as f32)
                 / 2.0,
-            (screen.h - (self.gameplay.matrix.height * self.g.settings.gameplay.block_size) as f32)
+            (screen.h - (self.gameplay.stack.height * self.g.settings.gameplay.block_size) as f32)
                 / 2.0,
         );
 

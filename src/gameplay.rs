@@ -13,12 +13,12 @@ use crate::{
     blocks::Blocks,
     global::Global,
     holder::Holder,
-    matrix::{Locked, Matrix},
     particles::Explosion,
     piece::Piece,
     popups::Popups,
     replay::ReplayData,
     score::Score,
+    stack::{Locked, Stack},
     utils,
 };
 
@@ -29,7 +29,7 @@ pub struct Gameplay {
     actions: VecDeque<Action>,
     replay: ReplayData,
 
-    pub matrix: Matrix,
+    pub stack: Stack,
     bag: Bag,
     piece: Piece,
     holder: Holder,
@@ -58,10 +58,10 @@ impl Gameplay {
         let actions = VecDeque::new();
         let replay = ReplayData::new(seed);
 
-        let matrix = Matrix::new(10, 20, 20);
+        let stack = Stack::new(10, 20, 20);
 
         let mut bag = Bag::new(seed);
-        let piece = Piece::new(bag.pop(), &matrix);
+        let piece = Piece::new(bag.pop(), &stack);
         let holder = Holder::default();
         let score = Score::default();
         let popups = Popups::new(ctx)?;
@@ -75,7 +75,7 @@ impl Gameplay {
             action_duration: Duration::new(0, 0),
             actions,
             replay,
-            matrix,
+            stack,
             bag,
             piece,
             holder,
@@ -141,14 +141,14 @@ impl Gameplay {
     }
 
     pub fn paused(&self) -> bool {
-        self.game_over || self.countdown.is_some() || self.matrix.blocked()
+        self.game_over || self.countdown.is_some() || self.stack.blocked()
     }
 
     fn process_action(&mut self, g: &mut Global, action: Action, sfx: bool) -> bool {
         match action {
             Action::HoldPiece => {
                 if let Some(shape) = self.holder.hold(self.piece.shape(), &mut self.bag) {
-                    self.piece = Piece::new(shape, &self.matrix);
+                    self.piece = Piece::new(shape, &self.stack);
                     if sfx {
                         g.sfx.play("hold");
                     }
@@ -157,12 +157,12 @@ impl Gameplay {
                 }
             }
             Action::FallPiece => {
-                if !self.piece.shift(0, 1, &self.matrix) && self.interactive {
+                if !self.piece.shift(0, 1, &self.stack) && self.interactive {
                     self.action(Action::LockPiece, true);
                 }
             }
             Action::LockPiece => {
-                match self.matrix.lock(
+                match self.stack.lock(
                     &self.piece,
                     Duration::from_millis(g.settings.gameplay.clear_delay.into()),
                 ) {
@@ -173,7 +173,7 @@ impl Gameplay {
                     }
                     Locked::Success(rows) => {
                         if rows > 0 {
-                            let t_spin = self.piece.t_spin(&self.matrix);
+                            let t_spin = self.piece.t_spin(&self.stack);
                             self.score.lock(rows, t_spin);
                             self.popups.lock(
                                 rows,
@@ -197,7 +197,7 @@ impl Gameplay {
                         }
 
                         if sfx {
-                            match (rows, self.piece.t_spin(&self.matrix)) {
+                            match (rows, self.piece.t_spin(&self.stack)) {
                                 (1, false) => g.sfx.play("erase1"),
                                 (2, false) => g.sfx.play("erase2"),
                                 (3, false) => g.sfx.play("erase3"),
@@ -210,15 +210,15 @@ impl Gameplay {
                             }
                         }
 
-                        self.piece = Piece::new(self.bag.pop(), &self.matrix);
-                        if self.matrix.collision(&self.piece) && self.interactive {
+                        self.piece = Piece::new(self.bag.pop(), &self.stack);
+                        if self.stack.collision(&self.piece) && self.interactive {
                             self.action(Action::GameOver, true);
                         } else {
                             self.reset_fall();
                             self.holder.unlock();
                         }
 
-                        if self.matrix.blocked() {
+                        if self.stack.blocked() {
                             return false;
                         }
                     }
@@ -226,7 +226,7 @@ impl Gameplay {
             }
             Action::GameOver => {
                 self.game_over = true;
-                self.matrix.game_over();
+                self.stack.game_over();
                 self.explode(Color::new(1.0, 0.0, 0.0, 1.0));
 
                 let mut popup = Popup::new(Duration::from_secs(10));
@@ -254,8 +254,8 @@ impl Gameplay {
     fn process_movement_action(&mut self, g: &mut Global, action: Action, sfx: bool) {
         match action {
             Action::MoveRight => {
-                let moved = self.piece.shift(1, 0, &self.matrix);
-                if moved && self.piece.touching_floor(&self.matrix) {
+                let moved = self.piece.shift(1, 0, &self.stack);
+                if moved && self.piece.touching_floor(&self.stack) {
                     self.reset_fall();
                 }
 
@@ -264,8 +264,8 @@ impl Gameplay {
                 }
             }
             Action::MoveLeft => {
-                let moved = self.piece.shift(-1, 0, &self.matrix);
-                if moved && self.piece.touching_floor(&self.matrix) {
+                let moved = self.piece.shift(-1, 0, &self.stack);
+                if moved && self.piece.touching_floor(&self.stack) {
                     self.reset_fall();
                 }
 
@@ -274,7 +274,7 @@ impl Gameplay {
                 }
             }
             Action::MoveDown => {
-                if self.piece.shift(0, 1, &self.matrix) {
+                if self.piece.shift(0, 1, &self.stack) {
                     self.reset_fall();
 
                     if sfx {
@@ -283,8 +283,8 @@ impl Gameplay {
                 }
             }
             Action::RotateClockwise => {
-                let rotated = self.piece.rotate(true, &self.matrix);
-                if rotated && self.piece.touching_floor(&self.matrix) {
+                let rotated = self.piece.rotate(true, &self.stack);
+                if rotated && self.piece.touching_floor(&self.stack) {
                     self.reset_fall();
                 }
 
@@ -293,8 +293,8 @@ impl Gameplay {
                 }
             }
             Action::RotateCounterClockwise => {
-                let rotated = self.piece.rotate(false, &self.matrix);
-                if rotated && self.piece.touching_floor(&self.matrix) {
+                let rotated = self.piece.rotate(false, &self.stack);
+                if rotated && self.piece.touching_floor(&self.stack) {
                     self.reset_fall();
                 }
 
@@ -303,7 +303,7 @@ impl Gameplay {
                 }
             }
             Action::SoftDrop => {
-                let rows = self.piece.fall(&self.matrix);
+                let rows = self.piece.fall(&self.stack);
                 if rows > 0 {
                     self.reset_fall();
                     self.score.soft_drop(rows);
@@ -314,7 +314,7 @@ impl Gameplay {
                 }
             }
             Action::HardDrop => {
-                let rows = self.piece.fall(&self.matrix);
+                let rows = self.piece.fall(&self.stack);
                 self.score.hard_drop(rows);
 
                 if sfx && rows > 0 {
@@ -335,11 +335,11 @@ impl Gameplay {
         }
 
         if g.imgui_state.debug_t_spin_tower {
-            self.matrix.debug_t_spin();
+            self.stack.debug_t_spin();
         }
 
         if g.imgui_state.debug_tetris_tower {
-            self.matrix.debug_tetris();
+            self.stack.debug_tetris();
         }
 
         if g.settings_state.skin_switched {
@@ -379,12 +379,12 @@ impl Gameplay {
 
         self.popups.update(
             ctx,
-            (g.settings.gameplay.block_size * self.matrix.width) as f32,
-            (g.settings.gameplay.block_size * self.matrix.height) as f32,
+            (g.settings.gameplay.block_size * self.stack.width) as f32,
+            (g.settings.gameplay.block_size * self.stack.height) as f32,
             g.settings.gameplay.block_size as f32,
         )?;
 
-        self.matrix.update(ctx, g, sfx)?;
+        self.stack.update(ctx, g, sfx)?;
 
         if self.paused() || g.imgui_state.paused {
             return Ok(());
@@ -432,7 +432,7 @@ impl Gameplay {
 
         self.bag.draw(
             ctx,
-            position + Vector2::new((self.matrix.width * block_size) as f32, 0.0),
+            position + Vector2::new((self.stack.width * block_size) as f32, 0.0),
             &mut self.blocks,
             ui_block_size,
             ui_color,
@@ -443,8 +443,8 @@ impl Gameplay {
             ctx,
             position
                 + Vector2::new(
-                    (block_size * self.matrix.width) as f32 + ui_block_size as f32,
-                    (block_size * self.matrix.height) as f32 - ui_scale.y * 3.0,
+                    (block_size * self.stack.width) as f32 + ui_block_size as f32,
+                    (block_size * self.stack.height) as f32 - ui_scale.y * 3.0,
                 ),
             ui_color,
             self.font,
@@ -455,14 +455,14 @@ impl Gameplay {
         ggez::graphics::pop_transform(ctx);
         ggez::graphics::apply_transformations(ctx)?;
 
-        self.matrix
+        self.stack
             .draw(ctx, position, &mut self.blocks, block_size)?;
 
         if !self.game_over {
             self.piece.draw(
                 ctx,
                 position,
-                self.matrix.vanish,
+                self.stack.vanish,
                 &mut self.blocks,
                 block_size,
                 1.0,
@@ -470,11 +470,11 @@ impl Gameplay {
 
             if g.settings.gameplay.ghost_piece > 0 {
                 let mut ghost = self.piece.clone();
-                if ghost.fall(&self.matrix) > 0 {
+                if ghost.fall(&self.stack) > 0 {
                     ghost.draw(
                         ctx,
                         position,
-                        self.matrix.vanish,
+                        self.stack.vanish,
                         &mut self.blocks,
                         block_size,
                         g.settings.gameplay.ghost_piece as f32 / 100.0,
@@ -484,7 +484,7 @@ impl Gameplay {
         }
 
         self.popups
-            .draw(ctx, position, (block_size * self.matrix.height) as f32)?;
+            .draw(ctx, position, (block_size * self.stack.height) as f32)?;
 
         Ok(())
     }

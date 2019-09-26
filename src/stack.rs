@@ -19,7 +19,7 @@ struct Clearing {
 
 pub type Grid = Vec<Vec<usize>>;
 
-pub struct Matrix {
+pub struct Stack {
     pub width: i32,
     pub height: i32,
     pub vanish: i32,
@@ -69,9 +69,9 @@ pub enum Locked {
     Success(i32),
 }
 
-impl Matrix {
-    pub fn new(width: i32, height: i32, vanish: i32) -> Matrix {
-        Matrix {
+impl Stack {
+    pub fn new(width: i32, height: i32, vanish: i32) -> Stack {
+        Stack {
             width,
             height,
             vanish,

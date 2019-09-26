@@ -7,7 +7,6 @@ mod global;
 mod holder;
 mod imgui_wrapper;
 mod input;
-mod matrix;
 mod particles;
 mod piece;
 mod popups;
@@ -16,6 +15,7 @@ mod score;
 mod settings;
 mod sfx;
 mod shape;
+mod stack;
 mod utils;
 
 use std::{ffi::OsStr, panic, thread};
