@@ -32,6 +32,7 @@ pub struct Gameplay {
     pub ghost_piece: u32,
     pub clear_delay: u32,
     pub skin: String,
+    pub stack_grid: bool,
     pub stack_outline: bool,
 }
 
@@ -84,6 +85,7 @@ impl Settings {
                     ghost_piece: 10,
                     clear_delay: 0,
                     skin: String::from("friends.png"),
+                    stack_grid: true,
                     stack_outline: true,
                 },
                 audio: Audio {
@@ -242,6 +244,12 @@ impl Settings {
                             .to_str(),
                     );
                 }
+                id.pop(&ui);
+
+                ui.text(im_str!("Stack grid"));
+                ui.same_line(pos);
+                let id = ui.push_id(im_str!("stack_grid"));
+                ui.checkbox(im_str!(""), &mut self.gameplay.stack_grid);
                 id.pop(&ui);
 
                 ui.text(im_str!("Stack outline"));

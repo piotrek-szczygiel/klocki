@@ -86,7 +86,7 @@ impl Matrix {
         }
     }
 
-    pub fn build_grid(&mut self, ctx: &mut Context, outline: bool) -> GameResult {
+    pub fn build_grid(&mut self, ctx: &mut Context, grid: bool, outline: bool) -> GameResult {
         let mut grid_mesh = MeshBuilder::new();
 
         let grid_color = Color::new(0.1, 0.1, 0.1, 0.5);
@@ -106,24 +106,26 @@ impl Matrix {
             background_color,
         );
 
-        for y in self.vanish..self.vanish + self.height {
-            for x in 0..self.width {
-                if self.grid[y as usize][x as usize] != 0 {
-                    continue;
+        if grid {
+            for y in self.vanish..self.vanish + self.height {
+                for x in 0..self.width {
+                    if self.grid[y as usize][x as usize] != 0 {
+                        continue;
+                    }
+
+                    let y = y - self.vanish;
+
+                    grid_mesh.rectangle(
+                        DrawMode::stroke(1.0),
+                        Rect::new(
+                            (x * self.block_size) as f32,
+                            (y * self.block_size) as f32,
+                            self.block_size as f32,
+                            self.block_size as f32,
+                        ),
+                        grid_color,
+                    );
                 }
-
-                let y = y - self.vanish;
-
-                grid_mesh.rectangle(
-                    DrawMode::stroke(1.0),
-                    Rect::new(
-                        (x * self.block_size) as f32,
-                        (y * self.block_size) as f32,
-                        self.block_size as f32,
-                        self.block_size as f32,
-                    ),
-                    grid_color,
-                );
             }
         }
 
@@ -143,7 +145,8 @@ impl Matrix {
                         up = true;
                     }
 
-                    if y == self.vanish + self.height - 1 || self.grid[y as usize + 1][x as usize] == 0
+                    if y == self.vanish + self.height - 1
+                        || self.grid[y as usize + 1][x as usize] == 0
                     {
                         down = true;
                     }
@@ -362,7 +365,11 @@ impl Matrix {
             .retain(|block| block.visible < block.lifetime);
 
         if self.update_grid {
-            self.build_grid(ctx, g.settings.gameplay.stack_outline)?;
+            self.build_grid(
+                ctx,
+                g.settings.gameplay.stack_grid,
+                g.settings.gameplay.stack_outline,
+            )?;
             self.update_grid = false;
         }
 
