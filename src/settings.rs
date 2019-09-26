@@ -32,6 +32,7 @@ pub struct Gameplay {
     pub ghost_piece: u32,
     pub clear_delay: u32,
     pub skin: String,
+    pub stack_outline: bool,
 }
 
 #[derive(Serialize, Deserialize)]
@@ -71,7 +72,7 @@ impl Settings {
         } else {
             Settings {
                 graphics: Graphics {
-                    window_size: (1280, 720),
+                    window_size: (800, 800),
                     fullscreen: false,
                     multi_sampling: NumSamples::Zero,
                     vsync: true,
@@ -79,10 +80,11 @@ impl Settings {
                     hide_menu: false,
                 },
                 gameplay: Gameplay {
-                    block_size: 32,
+                    block_size: 43,
                     ghost_piece: 10,
-                    clear_delay: 250,
-                    skin: String::from("default.png"),
+                    clear_delay: 0,
+                    skin: String::from("friends.png"),
+                    stack_outline: true,
                 },
                 audio: Audio {
                     music_volume: 10,
@@ -240,6 +242,12 @@ impl Settings {
                             .to_str(),
                     );
                 }
+                id.pop(&ui);
+
+                ui.text(im_str!("Stack outline"));
+                ui.same_line(pos);
+                let id = ui.push_id(im_str!("stack_outline"));
+                ui.checkbox(im_str!(""), &mut self.gameplay.stack_outline);
                 id.pop(&ui);
             }
 

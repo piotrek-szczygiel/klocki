@@ -175,8 +175,8 @@ impl Popups {
 
     pub fn lock(&mut self, rows: i32, t_spin: bool, btb: bool, combo: Option<i32>, delay: u64) {
         let mut lifetime = delay;
-        if lifetime < 250 {
-            lifetime = 250;
+        if lifetime < 500 {
+            lifetime = 500;
         }
 
         let mut popup = Popup::new(Duration::from_millis(lifetime * 2));

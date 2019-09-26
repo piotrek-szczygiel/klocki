@@ -86,7 +86,7 @@ impl Matrix {
         }
     }
 
-    pub fn build_grid(&mut self, ctx: &mut Context) -> GameResult {
+    pub fn build_grid(&mut self, ctx: &mut Context, outline: bool) -> GameResult {
         let mut grid_mesh = MeshBuilder::new();
 
         let grid_color = Color::new(0.1, 0.1, 0.1, 0.5);
@@ -127,104 +127,106 @@ impl Matrix {
             }
         }
 
-        for y in self.vanish..self.vanish + self.height {
-            for x in 0..self.width {
-                if self.grid[y as usize][x as usize] == 0 {
-                    continue;
-                }
+        if outline {
+            for y in self.vanish..self.vanish + self.height {
+                for x in 0..self.width {
+                    if self.grid[y as usize][x as usize] == 0 {
+                        continue;
+                    }
 
-                let mut up = false;
-                let mut down = false;
-                let mut left = false;
-                let mut right = false;
+                    let mut up = false;
+                    let mut down = false;
+                    let mut left = false;
+                    let mut right = false;
 
-                if y == self.vanish || self.grid[y as usize - 1][x as usize] == 0 {
-                    up = true;
-                }
+                    if y == self.vanish || self.grid[y as usize - 1][x as usize] == 0 {
+                        up = true;
+                    }
 
-                if y == self.vanish + self.height - 1 || self.grid[y as usize + 1][x as usize] == 0
-                {
-                    down = true;
-                }
+                    if y == self.vanish + self.height - 1 || self.grid[y as usize + 1][x as usize] == 0
+                    {
+                        down = true;
+                    }
 
-                if x == 0 || self.grid[y as usize][x as usize - 1] == 0 {
-                    left = true;
-                }
+                    if x == 0 || self.grid[y as usize][x as usize - 1] == 0 {
+                        left = true;
+                    }
 
-                if x == self.width - 1 || self.grid[y as usize][x as usize + 1] == 0 {
-                    right = true;
-                }
+                    if x == self.width - 1 || self.grid[y as usize][x as usize + 1] == 0 {
+                        right = true;
+                    }
 
-                let y = y - self.vanish;
+                    let y = y - self.vanish;
 
-                let corner = 1.0;
+                    let corner = 1.0;
 
-                if up {
-                    grid_mesh.line(
-                        &[
-                            Point2::new(
-                                (x * self.block_size) as f32 - corner,
-                                (y * self.block_size) as f32,
-                            ),
-                            Point2::new(
-                                ((x + 1) * self.block_size) as f32 + corner,
-                                (y * self.block_size) as f32,
-                            ),
-                        ],
-                        outline_width,
-                        outline_color,
-                    )?;
-                }
+                    if up {
+                        grid_mesh.line(
+                            &[
+                                Point2::new(
+                                    (x * self.block_size) as f32 - corner,
+                                    (y * self.block_size) as f32,
+                                ),
+                                Point2::new(
+                                    ((x + 1) * self.block_size) as f32 + corner,
+                                    (y * self.block_size) as f32,
+                                ),
+                            ],
+                            outline_width,
+                            outline_color,
+                        )?;
+                    }
 
-                if down {
-                    grid_mesh.line(
-                        &[
-                            Point2::new(
-                                (x * self.block_size) as f32 - corner,
-                                ((y + 1) * self.block_size) as f32,
-                            ),
-                            Point2::new(
-                                ((x + 1) * self.block_size) as f32 + corner,
-                                ((y + 1) * self.block_size) as f32,
-                            ),
-                        ],
-                        outline_width,
-                        outline_color,
-                    )?;
-                }
+                    if down {
+                        grid_mesh.line(
+                            &[
+                                Point2::new(
+                                    (x * self.block_size) as f32 - corner,
+                                    ((y + 1) * self.block_size) as f32,
+                                ),
+                                Point2::new(
+                                    ((x + 1) * self.block_size) as f32 + corner,
+                                    ((y + 1) * self.block_size) as f32,
+                                ),
+                            ],
+                            outline_width,
+                            outline_color,
+                        )?;
+                    }
 
-                if left {
-                    grid_mesh.line(
-                        &[
-                            Point2::new(
-                                (x * self.block_size) as f32,
-                                (y * self.block_size) as f32 - corner,
-                            ),
-                            Point2::new(
-                                (x * self.block_size) as f32,
-                                ((y + 1) * self.block_size) as f32 + corner,
-                            ),
-                        ],
-                        outline_width,
-                        outline_color,
-                    )?;
-                }
+                    if left {
+                        grid_mesh.line(
+                            &[
+                                Point2::new(
+                                    (x * self.block_size) as f32,
+                                    (y * self.block_size) as f32 - corner,
+                                ),
+                                Point2::new(
+                                    (x * self.block_size) as f32,
+                                    ((y + 1) * self.block_size) as f32 + corner,
+                                ),
+                            ],
+                            outline_width,
+                            outline_color,
+                        )?;
+                    }
 
-                if right {
-                    grid_mesh.line(
-                        &[
-                            Point2::new(
-                                ((x + 1) * self.block_size) as f32,
-                                (y * self.block_size) as f32 - corner,
-                            ),
-                            Point2::new(
-                                ((x + 1) * self.block_size) as f32,
-                                ((y + 1) * self.block_size) as f32 + corner,
-                            ),
-                        ],
-                        outline_width,
-                        outline_color,
-                    )?;
+                    if right {
+                        grid_mesh.line(
+                            &[
+                                Point2::new(
+                                    ((x + 1) * self.block_size) as f32,
+                                    (y * self.block_size) as f32 - corner,
+                                ),
+                                Point2::new(
+                                    ((x + 1) * self.block_size) as f32,
+                                    ((y + 1) * self.block_size) as f32 + corner,
+                                ),
+                            ],
+                            outline_width,
+                            outline_color,
+                        )?;
+                    }
                 }
             }
         }
@@ -344,10 +346,10 @@ impl Matrix {
         self.collapse_rows(&clear);
 
         let dt = utils::dt_f32(ctx);
-        let g = Vector2::new(0.0, 75.0) * dt;
+        let g_force = Vector2::new(0.0, 75.0) * dt;
 
         for block in &mut self.destroyed_blocks {
-            block.speed += g;
+            block.speed += g_force;
             block.position += block.speed * dt;
             block.rotation += block.rotation_speed * dt;
             block.visible += timer::delta(ctx);
@@ -360,7 +362,7 @@ impl Matrix {
             .retain(|block| block.visible < block.lifetime);
 
         if self.update_grid {
-            self.build_grid(ctx)?;
+            self.build_grid(ctx, g.settings.gameplay.stack_outline)?;
             self.update_grid = false;
         }
 
@@ -377,7 +379,6 @@ impl Matrix {
         if self.block_size != block_size {
             self.block_size = block_size;
             self.update_grid = true;
-            self.build_grid(ctx)?;
         }
 
         blocks.clear();
