@@ -77,7 +77,7 @@ impl Game {
         let gameplay = Gameplay::new(ctx, &mut g, true, &seed)?;
 
         let rect = graphics::screen_coordinates(ctx);
-        let particle_animation = ParticleAnimation::new(75, 200.0, 80.0, rect.w, rect.h);
+        let particle_animation = ParticleAnimation::new(200, 80.0, rect.w, rect.h);
 
         let mut music = audio::Source::new(ctx, utils::path(ctx, "chiptronical.ogg"))?;
         music.set_repeat(true);
@@ -178,8 +178,8 @@ impl EventHandler for Game {
 
         gameplay.update(ctx, &mut self.g, true)?;
 
-        if gameplay.explosion() {
-            self.particle_animation.explode(Point2::new(960.0, 540.0));
+        if let Some(explosion) = gameplay.explosion() {
+            self.particle_animation.explode(explosion);
         }
 
         if self.replay.is_none() {

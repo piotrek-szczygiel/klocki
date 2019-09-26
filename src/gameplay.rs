@@ -14,6 +14,7 @@ use crate::{
     global::Global,
     holder::Holder,
     matrix::{Locked, Matrix},
+    particles::Explosion,
     piece::Piece,
     popups::Popups,
     replay::ReplayData,
@@ -42,7 +43,7 @@ pub struct Gameplay {
     font: Font,
     blocks: Blocks,
 
-    explosion: bool,
+    explosion: Option<Explosion>,
     countdown: Option<i32>,
     countdown_switch: Duration,
 }
@@ -85,7 +86,7 @@ impl Gameplay {
             fall_interval: Duration::from_secs(1),
             font,
             blocks,
-            explosion: false,
+            explosion: None,
             countdown: Some(4),
             countdown_switch: Duration::new(0, 0),
         })
@@ -99,8 +100,12 @@ impl Gameplay {
         }
     }
 
-    pub fn explode(&mut self) {
-        self.explosion = true;
+    pub fn explode(&mut self, color: Color) {
+        self.explosion = Some(Explosion {
+            position: Point2::new(960.0, 540.0),
+            color,
+            strength: 30.0,
+        });
     }
 
     pub fn action(&mut self, action: Action, immediate: bool) {
@@ -117,9 +122,9 @@ impl Gameplay {
         }
     }
 
-    pub fn explosion(&mut self) -> bool {
+    pub fn explosion(&mut self) -> Option<Explosion> {
         let result = self.explosion;
-        self.explosion = false;
+        self.explosion = None;
         result
     }
 
@@ -168,7 +173,6 @@ impl Gameplay {
                     }
                     Locked::Success(rows) => {
                         if rows > 0 {
-                            self.explode();
                             let t_spin = self.piece.t_spin(&self.matrix);
                             self.score.lock(rows, t_spin);
                             self.popups.lock(
@@ -178,6 +182,16 @@ impl Gameplay {
                                 self.score.combo(),
                                 g.settings.gameplay.clear_delay.into(),
                             );
+
+                            let color = if rows == 4 {
+                                Color::new(0.0, 1.0, 1.0, 1.0)
+                            } else if t_spin {
+                                Color::new(1.0, 0.0, 1.0, 1.0)
+                            } else {
+                                Color::new(0.5, 0.5, 0.0, 1.0)
+                            };
+
+                            self.explode(color);
                         } else {
                             self.score.reset_combo();
                         }
@@ -213,7 +227,7 @@ impl Gameplay {
             Action::GameOver => {
                 self.game_over = true;
                 self.matrix.game_over();
-                self.explode();
+                self.explode(Color::new(1.0, 0.0, 0.0, 1.0));
 
                 let mut popup = Popup::new(Duration::from_secs(10));
                 popup.add("Game Over", Color::new(0.9, 0.1, 0.2, 1.0), 4.0);

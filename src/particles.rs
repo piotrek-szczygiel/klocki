@@ -7,12 +7,20 @@ use rand_distr::{Distribution, Normal, Uniform};
 
 use crate::utils;
 
+#[derive(Copy, Clone)]
+pub struct Explosion {
+    pub position: Point2<f32>,
+    pub color: Color,
+    pub strength: f32,
+}
+
 struct Particle {
     position: Point2<f32>,
     speed: Vector2<f32>,
     starting_speed: Vector2<f32>,
     size: f32,
     color: Color,
+    starting_color: Color,
 }
 
 impl Particle {
@@ -23,6 +31,7 @@ impl Particle {
             starting_speed: speed.abs(),
             size,
             color,
+            starting_color: color,
         }
     }
 
@@ -70,24 +79,16 @@ impl Particle {
 
 pub struct ParticleAnimation {
     particles: Vec<Particle>,
-    threshold: f32,
     max_speed: f32,
     width: f32,
     height: f32,
-    explosion: Option<Point2<f32>>,
+    explosion: Option<Explosion>,
 }
 
 impl ParticleAnimation {
-    pub fn new(
-        particles: usize,
-        threshold: f32,
-        max_speed: f32,
-        width: f32,
-        height: f32,
-    ) -> ParticleAnimation {
+    pub fn new(particles: usize, max_speed: f32, width: f32, height: f32) -> ParticleAnimation {
         ParticleAnimation {
             particles: Particle::random_plane(particles, width, height),
-            threshold,
             max_speed,
             width,
             height,
@@ -95,8 +96,8 @@ impl ParticleAnimation {
         }
     }
 
-    pub fn explode(&mut self, position: Point2<f32>) {
-        self.explosion = Some(position);
+    pub fn explode(&mut self, explosion: Explosion) {
+        self.explosion = Some(explosion);
     }
 
     pub fn update(&mut self, ctx: &mut Context) -> GameResult<()> {
@@ -130,20 +131,26 @@ impl ParticleAnimation {
             if let Some(explosion) = self.explosion {
                 let mut direction = Vector2::new(0.0, 0.0);
 
-                if particle.position[0] < explosion[0] {
+                if particle.position[0] < explosion.position[0] {
                     direction[0] = -1.0;
                 } else {
                     direction[0] = 1.0;
                 }
 
-                if particle.position[1] < explosion[1] {
+                if particle.position[1] < explosion.position[1] {
                     direction[1] = -1.0;
                 } else {
                     direction[1] = 1.0;
                 }
 
-                particle.speed[0] += direction[0] * particle.starting_speed[0] * 20.0;
-                particle.speed[1] += direction[1] * particle.starting_speed[1] * 20.0;
+                particle.speed[0] +=
+                    direction[0] * particle.starting_speed[0] / 2.0 * explosion.strength;
+                particle.speed[1] +=
+                    direction[1] * particle.starting_speed[1] / 2.0 * explosion.strength;
+
+                particle.color.r *= explosion.color.r;
+                particle.color.g *= explosion.color.g;
+                particle.color.b *= explosion.color.b;
             }
 
             const MOUSE_THRESHOLD: f32 = 200.0;
@@ -181,6 +188,21 @@ impl ParticleAnimation {
                 }
             }
 
+            fn recover_color(a: &mut f32, b: &mut f32, dt: f32) {
+                const THRESHOLD: f32 = 0.01;
+                const SECONDS: f32 = 10.0;
+
+                if *a - *b > THRESHOLD {
+                    *a -= dt / SECONDS;
+                } else if *a - *b < THRESHOLD {
+                    *a += dt / SECONDS;
+                }
+            }
+
+            recover_color(&mut particle.color.r, &mut particle.starting_color.r, dt);
+            recover_color(&mut particle.color.g, &mut particle.starting_color.g, dt);
+            recover_color(&mut particle.color.b, &mut particle.starting_color.b, dt);
+
             const MAX_SPEED: f32 = 75.0;
             clamp_mut(&mut particle.speed[0], -MAX_SPEED, MAX_SPEED);
             clamp_mut(&mut particle.speed[1], -MAX_SPEED, MAX_SPEED);
@@ -194,28 +216,10 @@ impl ParticleAnimation {
     }
 
     pub fn draw(&mut self, ctx: &mut Context) -> GameResult<()> {
-        let mut mesh_lines = MeshBuilder::new();
         let mut mesh_circles = MeshBuilder::new();
 
         for i in 0..self.particles.len() {
             let particle = &self.particles[i];
-
-            for j in 0..i {
-                let p1 = &self.particles[i];
-                let p2 = &self.particles[j];
-
-                let distance = nalgebra::distance(&p1.position, &p2.position);
-
-                if distance < self.threshold {
-                    let color = 0.3 - distance / self.threshold * 0.3;
-
-                    mesh_lines.line(
-                        &[p1.position, p2.position],
-                        (p1.size + p2.size) / 4.0,
-                        Color::new(color, color, color, 1.0),
-                    )?;
-                }
-            }
 
             mesh_circles.circle(
                 DrawMode::fill(),
@@ -225,9 +229,6 @@ impl ParticleAnimation {
                 particle.color,
             );
         }
-
-        let mesh_lines = mesh_lines.build(ctx)?;
-        graphics::draw(ctx, &mesh_lines, DrawParam::new())?;
 
         let mesh_circles = mesh_circles.build(ctx)?;
         graphics::draw(ctx, &mesh_circles, DrawParam::new())?;
