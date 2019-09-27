@@ -401,8 +401,9 @@ impl Gameplay {
             }
         }
 
+        self.piece.update(ctx, &self.stack);
+
         if self.interactive {
-            self.piece.update(ctx, &self.stack);
             if self.piece.locking() > Duration::from_millis(g.settings.gameplay.lock_delay.into()) {
                 self.action(Action::LockPiece, true);
                 log::trace!("locking");

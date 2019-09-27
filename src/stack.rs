@@ -390,7 +390,7 @@ impl Stack {
 
         blocks.clear();
 
-        let alpha = 0.6;
+        let alpha = 0.5;
 
         for y in 0..=self.height {
             for x in 0..self.width {
