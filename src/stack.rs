@@ -1,4 +1,4 @@
-use std::{collections::VecDeque, time::Duration};
+use std::time::Duration;
 
 use ggez::{
     graphics::{self, Color, DrawMode, DrawParam, Mesh, MeshBuilder, Rect},
@@ -10,11 +10,10 @@ use rand_distr::{Distribution, Normal, Uniform};
 use crate::{blocks::Blocks, global::Global, piece::Piece, utils};
 
 struct Clearing {
-    rows: VecDeque<i32>,
+    rows: Vec<i32>,
+    cleared: bool,
     current_duration: Duration,
     max_duration: Duration,
-    just_created: bool,
-    finished: bool,
 }
 
 pub type Grid = Vec<Vec<usize>>;
@@ -59,7 +58,7 @@ impl Randomizer {
             uniform_vx: Uniform::new(-7.5, 7.5),
             normal_vy: Normal::new(-10.0, 5.0).unwrap(),
             uniform_vr: Uniform::new(-8.0 * std::f32::consts::PI, 8.0 * std::f32::consts::PI),
-            uniform_lifetime: Uniform::new(250, 750),
+            uniform_lifetime: Uniform::new(500, 1000),
         }
     }
 }
@@ -82,18 +81,19 @@ impl Stack {
             grid: vec![vec![0; width as usize]; (height + vanish) as usize],
             grid_mesh: None,
             block_size: 0,
-            update_grid: false,
+            update_grid: true,
         }
     }
 
     pub fn build_grid(&mut self, ctx: &mut Context, grid: bool, outline: bool) -> GameResult {
         let mut grid_mesh = MeshBuilder::new();
 
-        let grid_color = Color::new(0.1, 0.1, 0.1, 0.5);
-        let outline_color = Color::new(0.8, 0.9, 1.0, 0.8);
-        let background_color = Color::new(0.02, 0.03, 0.04, 0.95);
+        const GRID_COLOR: Color = Color::new(0.1, 0.11, 0.12, 0.5);
+        const OUTLINE_COLOR: Color = Color::new(0.8, 0.9, 1.0, 0.8);
+        const BACKGROUND_COLOR: Color = Color::new(0.02, 0.03, 0.04, 0.95);
 
-        let outline_width = 4.0;
+        const GRID_WIDTH: f32 = 1.0;
+        const OUTLINE_WIDTH: f32 = 3.0;
 
         grid_mesh.rectangle(
             DrawMode::fill(),
@@ -103,7 +103,7 @@ impl Stack {
                 (self.width * self.block_size) as f32,
                 (self.height * self.block_size) as f32,
             ),
-            background_color,
+            BACKGROUND_COLOR,
         );
 
         if grid {
@@ -116,14 +116,14 @@ impl Stack {
                     let y = y - self.vanish;
 
                     grid_mesh.rectangle(
-                        DrawMode::stroke(1.0),
+                        DrawMode::stroke(GRID_WIDTH),
                         Rect::new(
                             (x * self.block_size) as f32,
                             (y * self.block_size) as f32,
                             self.block_size as f32,
                             self.block_size as f32,
                         ),
-                        grid_color,
+                        GRID_COLOR,
                     );
                 }
             }
@@ -175,8 +175,8 @@ impl Stack {
                                     (y * self.block_size) as f32,
                                 ),
                             ],
-                            outline_width,
-                            outline_color,
+                            OUTLINE_WIDTH,
+                            OUTLINE_COLOR,
                         )?;
                     }
 
@@ -192,8 +192,8 @@ impl Stack {
                                     ((y + 1) * self.block_size) as f32,
                                 ),
                             ],
-                            outline_width,
-                            outline_color,
+                            OUTLINE_WIDTH,
+                            OUTLINE_COLOR,
                         )?;
                     }
 
@@ -209,8 +209,8 @@ impl Stack {
                                     ((y + 1) * self.block_size) as f32 + corner,
                                 ),
                             ],
-                            outline_width,
-                            outline_color,
+                            OUTLINE_WIDTH,
+                            OUTLINE_COLOR,
                         )?;
                     }
 
@@ -226,8 +226,8 @@ impl Stack {
                                     ((y + 1) * self.block_size) as f32 + corner,
                                 ),
                             ],
-                            outline_width,
-                            outline_color,
+                            OUTLINE_WIDTH,
+                            OUTLINE_COLOR,
                         )?;
                     }
                 }
@@ -235,14 +235,14 @@ impl Stack {
         }
 
         grid_mesh.rectangle(
-            DrawMode::stroke(outline_width),
+            DrawMode::stroke(OUTLINE_WIDTH),
             Rect::new(
                 0.0,
                 0.0,
                 (self.width * self.block_size) as f32,
                 (self.height * self.block_size) as f32,
             ),
-            outline_color,
+            OUTLINE_COLOR,
         );
 
         self.grid_mesh = Some((grid_mesh.build(ctx)?, self.block_size));
@@ -317,36 +317,36 @@ impl Stack {
     }
 
     pub fn update(&mut self, ctx: &mut Context, g: &mut Global, sfx: bool) -> GameResult {
-        let mut clear = vec![];
-
         if let Some(clearing) = &mut self.clearing {
             clearing.current_duration += timer::delta(ctx);
-            loop {
-                if clearing.just_created || clearing.current_duration >= clearing.max_duration {
-                    clearing.just_created = false;
-                    clearing.current_duration = Duration::new(0, 0);
 
-                    if clearing.finished {
-                        self.clearing = None;
-                        break;
-                    } else {
-                        clear.push(clearing.rows.pop_front().unwrap());
-
-                        if sfx && !self.game_over {
-                            g.sfx.play("linefall");
-                        }
-
-                        if clearing.rows.is_empty() {
-                            clearing.finished = true;
-                        }
+            if !clearing.cleared {
+                clearing.cleared = true;
+                for &y in &clearing.rows {
+                    for x in 0..self.width {
+                        self.grid[y as usize][x as usize] = 0;
                     }
-                } else {
-                    break;
                 }
             }
-        }
 
-        self.collapse_rows(&clear);
+            if clearing.current_duration >= clearing.max_duration {
+                for &y in &clearing.rows {
+                    for y in (1..=y).rev() {
+                        for x in 0..self.width {
+                            self.grid[y as usize][x as usize] =
+                                self.grid[y as usize - 1][x as usize];
+                        }
+                    }
+                }
+
+                if sfx {
+                    g.sfx.play("linefall");
+                }
+
+                self.clearing = None;
+                self.update_grid = true;
+            }
+        }
 
         let dt = utils::dt_f32(ctx);
         let g_force = Vector2::new(0.0, 75.0) * dt;
@@ -456,19 +456,13 @@ impl Stack {
 
     fn clear_full_rows(&mut self, clear_delay: Duration) -> i32 {
         let rows = self.get_full_rows();
-        let result = rows.len();
+        let length = rows.len();
 
-        if !rows.is_empty() {
-            self.clearing = Some(Clearing {
-                rows: VecDeque::from(rows),
-                current_duration: Duration::new(0, 0),
-                max_duration: clear_delay / result as u32,
-                just_created: true,
-                finished: false,
-            });
+        if length > 0 {
+            self.clear_rows(&rows, clear_delay);
         }
 
-        result as i32
+        length as i32
     }
 
     fn get_full_rows(&self) -> Vec<i32> {
@@ -492,7 +486,7 @@ impl Stack {
         rows
     }
 
-    fn collapse_rows(&mut self, rows: &[i32]) {
+    fn clear_rows(&mut self, rows: &[i32], clear_delay: Duration) {
         self.update_grid = true;
         let mut rng = rand::thread_rng();
 
@@ -505,13 +499,14 @@ impl Stack {
                     Duration::from_millis(self.randomizer.uniform_lifetime.sample(&mut rng));
                 self.generate_destroyed_block(x, row, Vector2::new(vx, vy), vr, lifetime);
             }
-
-            for y in (1..=row).rev() {
-                for x in 0..self.width {
-                    self.grid[y as usize][x as usize] = self.grid[y as usize - 1][x as usize];
-                }
-            }
         }
+
+        self.clearing = Some(Clearing {
+            rows: Vec::from(rows),
+            cleared: false,
+            current_duration: Duration::new(0, 0),
+            max_duration: clear_delay,
+        });
     }
 
     pub fn game_over(&mut self) {
@@ -525,7 +520,7 @@ impl Stack {
             }
         }
 
-        self.collapse_rows(&rows);
+        self.clear_rows(&rows, Duration::new(0, 0));
         self.game_over = true;
     }
 
