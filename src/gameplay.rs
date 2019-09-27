@@ -6,8 +6,8 @@ use ggez::{
     timer, Context, GameResult,
 };
 
-use crate::popups::Popup;
 use crate::{
+    popups::Popup,
     action::Action,
     bag::Bag,
     blocks::Blocks,
@@ -19,7 +19,7 @@ use crate::{
     replay::ReplayData,
     score::Score,
     stack::{Locked, Stack},
-    utils,
+    utils
 };
 
 pub struct Gameplay {
@@ -37,7 +37,7 @@ pub struct Gameplay {
     popups: Popups,
 
     game_over: bool,
-    still: Duration,
+    falling: Duration,
     fall_interval: Duration,
 
     font: Font,
@@ -82,7 +82,7 @@ impl Gameplay {
             score,
             popups,
             game_over: false,
-            still: Duration::new(0, 0),
+            falling: Duration::new(0, 0),
             fall_interval: Duration::from_secs(1),
             font,
             blocks,
@@ -93,10 +93,10 @@ impl Gameplay {
     }
 
     fn reset_fall(&mut self) {
-        if self.still > self.fall_interval {
-            self.still -= self.fall_interval
+        if self.falling > self.fall_interval {
+            self.falling -= self.fall_interval
         } else {
-            self.still = Duration::new(0, 0);
+            self.falling = Duration::new(0, 0);
         }
     }
 
@@ -402,12 +402,18 @@ impl Gameplay {
         }
 
         if self.interactive {
-            self.still += timer::delta(ctx);
+            self.piece.update(ctx, &self.stack);
+            if self.piece.locking() > Duration::from_millis(g.settings.gameplay.lock_delay.into()) {
+                self.action(Action::LockPiece, true);
+                log::trace!("locking");
+            } else {
+                self.falling += timer::delta(ctx);
 
-            if self.still >= self.fall_interval {
-                self.still -= self.fall_interval;
+                if self.falling >= self.fall_interval {
+                    self.falling -= self.fall_interval;
 
-                self.action(Action::FallPiece, true);
+                    self.action(Action::FallPiece, true);
+                }
             }
         }
 
@@ -459,13 +465,15 @@ impl Gameplay {
             .draw(ctx, position, &mut self.blocks, block_size)?;
 
         if !self.game_over {
+            let alpha = 1.0
+                - self.piece.locking().as_millis() as f32 / g.settings.gameplay.lock_delay as f32;
             self.piece.draw(
                 ctx,
                 position,
                 self.stack.vanish,
                 &mut self.blocks,
                 block_size,
-                1.0,
+                alpha,
             )?;
 
             if g.settings.gameplay.ghost_piece > 0 {

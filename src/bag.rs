@@ -6,7 +6,9 @@ use std::{
 use ggez::{
     graphics::{self, Color, DrawParam, Font, Scale, Text, TextFragment},
     nalgebra::{Point2, Vector2},
-    Context, GameResult,
+    Context,
+    GameResult,
+    graphics::Align
 };
 use rand::{rngs::StdRng, seq::SliceRandom, SeedableRng};
 
@@ -14,7 +16,6 @@ use crate::{
     blocks::Blocks,
     shape::{self, Shape, ShapeType},
 };
-use ggez::graphics::Align;
 
 pub struct Bag {
     bag: VecDeque<ShapeType>,

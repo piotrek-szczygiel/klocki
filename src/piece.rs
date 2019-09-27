@@ -1,4 +1,6 @@
-use ggez::{self, nalgebra::Point2, Context, GameResult};
+use std::time::Duration;
+
+use ggez::{self, nalgebra::Point2, timer, Context, GameResult};
 
 use crate::{
     blocks::Blocks,
@@ -20,6 +22,7 @@ pub struct Piece {
     pub y: i32,
     rotation: usize,
     last_movement: Movement,
+    locking: Duration,
 }
 
 impl Piece {
@@ -30,10 +33,17 @@ impl Piece {
             y: 0,
             rotation: 0,
             last_movement: Movement::None,
+            locking: Duration::new(0, 0),
         };
 
         piece.reset(&stack);
         piece
+    }
+
+    pub fn update(&mut self, ctx: &mut Context, stack: &Stack) {
+        if self.collision(0, 1, stack) {
+            self.locking += timer::delta(ctx);
+        }
     }
 
     pub fn t_spin(&self, stack: &Stack) -> bool {
@@ -76,6 +86,7 @@ impl Piece {
         self.y = stack.vanish - self.shape.grids[0].height - self.shape.grids[0].offset_y;
         self.rotation = 0;
         self.last_movement = Movement::None;
+        self.clear_locking();
     }
 
     pub fn shift(&mut self, x: i32, y: i32, stack: &Stack) -> bool {
@@ -86,10 +97,15 @@ impl Piece {
         self.x += x;
         self.y += y;
         self.last_movement = Movement::Shift;
+        self.clear_locking();
         true
     }
 
     pub fn rotate(&mut self, clockwise: bool, stack: &Stack) -> bool {
+        if self.shape() == ShapeType::O {
+            return false;
+        }
+
         let kicks = self.shape.kicks[self.rotation];
         let last_rotation = self.rotation;
         let mut rotated = false;
@@ -119,6 +135,7 @@ impl Piece {
 
         if rotated {
             self.last_movement = Movement::Rotate;
+            self.clear_locking();
         } else {
             self.rotation = last_rotation;
         }
@@ -133,10 +150,19 @@ impl Piece {
         }
 
         if rows > 0 {
-            self.last_movement = Movement::None;
+            self.last_movement = Movement::Shift;
+            self.clear_locking();
         }
 
         rows
+    }
+
+    pub fn clear_locking(&mut self) {
+        self.locking = Duration::new(0, 0);
+    }
+
+    pub fn locking(&self) -> Duration {
+        self.locking
     }
 
     pub fn touching_floor(&mut self, stack: &Stack) -> bool {

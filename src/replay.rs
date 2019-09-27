@@ -111,7 +111,7 @@ impl Replay {
     }
 
     pub fn update(&mut self, ctx: &mut Context) {
-        self.action_duration += timer::delta(ctx) * 5;
+        self.action_duration += timer::delta(ctx);
 
         while let Some(duration) = self.replay_data.current_duration() {
             if self.action_duration >= duration {
