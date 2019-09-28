@@ -222,7 +222,7 @@ impl Settings {
                 ui.text(im_str!("Block size"));
                 ui.same_line(pos);
                 let id = ui.push_id(im_str!("block_size"));
-                Slider::new(im_str!(""), 16..=44).build(&ui, &mut self.gameplay.block_size);
+                Slider::new(im_str!(""), 24..=43).build(&ui, &mut self.gameplay.block_size);
                 id.pop(&ui);
 
                 ui.text(im_str!("Entry delay"));

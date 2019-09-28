@@ -443,16 +443,16 @@ impl Gameplay {
 
         self.piece.update(ctx, &self.stack);
 
-        if self.interactive {
+        if let Some(entering) = self.piece_entering.as_mut() {
+            *entering += timer::delta(ctx);
+
+            if *entering >= Duration::from_millis(g.settings.gameplay.entry_delay.into()) {
+                self.piece_entering = None;
+                self.piece_visible = true;
+            }
+        } else if self.interactive {
             if self.piece.locking() > Duration::from_millis(g.settings.gameplay.lock_delay.into()) {
                 self.action(Action::LockPiece, true);
-            } else if let Some(entering) = self.piece_entering.as_mut() {
-                *entering += timer::delta(ctx);
-
-                if *entering >= Duration::from_millis(g.settings.gameplay.entry_delay.into()) {
-                    self.piece_entering = None;
-                    self.piece_visible = true;
-                }
             } else {
                 self.falling += timer::delta(ctx);
 
