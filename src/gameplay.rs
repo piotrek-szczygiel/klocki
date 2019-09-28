@@ -236,17 +236,7 @@ impl Gameplay {
                         self.piece_entering = Some(Duration::new(0, 0));
                         self.piece_visible = false;
 
-                        self.piece = Piece::new(self.bag.pop(), &self.stack);
-                        if self.stack.collision(&self.piece) && self.interactive {
-                            self.action(Action::GameOver, true);
-                        } else {
-                            self.reset_fall();
-                            self.holder.unlock();
-                        }
-
-                        if self.stack.blocked() {
-                            return false;
-                        }
+                        return false;
                     }
                 };
             }
@@ -427,17 +417,15 @@ impl Gameplay {
         self.actions(&actions);
 
         self.action_duration += timer::delta(ctx);
-        while let Some(action) = self.actions.pop_front() {
-            if self.paused() || self.piece_entering.is_some() {
+
+        if self.piece_entering.is_none() {
+            while let Some(action) = self.actions.pop_front() {
+                self.replay.add(action, self.action_duration);
                 self.action_duration = Duration::new(0, 0);
-                continue;
-            }
 
-            self.replay.add(action, self.action_duration);
-            self.action_duration = Duration::new(0, 0);
-
-            if !self.process_action(g, action, sfx) {
-                break;
+                if !self.process_action(g, action, sfx) {
+                    break;
+                }
             }
         }
 
@@ -449,6 +437,14 @@ impl Gameplay {
             if *entering >= Duration::from_millis(g.settings.gameplay.entry_delay.into()) {
                 self.piece_entering = None;
                 self.piece_visible = true;
+
+                self.piece = Piece::new(self.bag.pop(), &self.stack);
+                if self.stack.collision(&self.piece) && self.interactive {
+                    self.action(Action::GameOver, true);
+                } else {
+                    self.reset_fall();
+                    self.holder.unlock();
+                }
             }
         } else if self.interactive {
             if self.piece.locking() > Duration::from_millis(g.settings.gameplay.lock_delay.into()) {
