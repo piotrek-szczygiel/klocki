@@ -2,6 +2,7 @@ use std::{collections::VecDeque, time::Duration};
 
 use ggez::{
     graphics::{Color, Font, Scale},
+    input::keyboard::KeyCode,
     nalgebra::{Point2, Vector2},
     timer, Context, GameResult,
 };
@@ -12,6 +13,7 @@ use crate::{
     blocks::Blocks,
     global::Global,
     holder::Holder,
+    input::Input,
     particles::Explosion,
     piece::Piece,
     popups::Popup,
@@ -24,6 +26,7 @@ use crate::{
 
 pub struct Gameplay {
     interactive: bool,
+    input: Input,
     action_duration: Duration,
 
     actions: VecDeque<Action>,
@@ -32,6 +35,7 @@ pub struct Gameplay {
     pub stack: Stack,
     bag: Bag,
     piece: Piece,
+    piece_visible: bool,
     holder: Holder,
     score: Score,
     popups: Popups,
@@ -39,6 +43,8 @@ pub struct Gameplay {
     game_over: bool,
     falling: Duration,
     fall_interval: Duration,
+
+    piece_entering: Option<Duration>,
 
     font: Font,
     blocks: Blocks,
@@ -55,6 +61,20 @@ impl Gameplay {
         interactive: bool,
         seed: &[u8; 32],
     ) -> GameResult<Gameplay> {
+        let mut input = Input::new();
+        input
+            .bind(KeyCode::Right, Action::MoveRight, true)
+            .bind(KeyCode::Left, Action::MoveLeft, true)
+            .bind(KeyCode::Down, Action::MoveDown, true)
+            .bind(KeyCode::Up, Action::RotateClockwise, false)
+            .bind(KeyCode::X, Action::RotateClockwise, false)
+            .bind(KeyCode::Z, Action::RotateCounterClockwise, false)
+            .bind(KeyCode::Space, Action::HardDrop, false)
+            .bind(KeyCode::LShift, Action::SoftDrop, false)
+            .bind(KeyCode::C, Action::HoldPiece, false)
+            .exclude(KeyCode::Right, KeyCode::Left)
+            .exclude(KeyCode::Left, KeyCode::Right);
+
         let actions = VecDeque::new();
         let replay = ReplayData::new(seed);
 
@@ -72,18 +92,21 @@ impl Gameplay {
 
         Ok(Gameplay {
             interactive,
+            input,
             action_duration: Duration::new(0, 0),
             actions,
             replay,
             stack,
             bag,
             piece,
+            piece_visible: true,
             holder,
             score,
             popups,
             game_over: false,
             falling: Duration::new(0, 0),
             fall_interval: Duration::from_secs(1),
+            piece_entering: None,
             font,
             blocks,
             explosion: None,
@@ -164,7 +187,7 @@ impl Gameplay {
             Action::LockPiece => {
                 match self.stack.lock(
                     &self.piece,
-                    Duration::from_millis(g.settings.gameplay.clear_delay.into()),
+                    Duration::from_millis(g.settings.gameplay.entry_delay.into()),
                 ) {
                     Locked::Collision => {
                         if self.interactive {
@@ -180,7 +203,7 @@ impl Gameplay {
                                 t_spin,
                                 self.score.btb(),
                                 self.score.combo(),
-                                g.settings.gameplay.clear_delay.into(),
+                                g.settings.gameplay.entry_delay.into(),
                             );
 
                             let color = if rows == 4 {
@@ -209,6 +232,9 @@ impl Gameplay {
                                 _ => g.sfx.play("lock"),
                             }
                         }
+
+                        self.piece_entering = Some(Duration::new(0, 0));
+                        self.piece_visible = false;
 
                         self.piece = Piece::new(self.bag.pop(), &self.stack);
                         if self.stack.collision(&self.piece) && self.interactive {
@@ -386,14 +412,23 @@ impl Gameplay {
 
         self.stack.update(ctx, g, sfx)?;
 
+        self.input.update(
+            ctx,
+            g.settings.input.das,
+            g.settings.input.arr,
+            self.paused() || g.imgui_state.paused || self.piece_entering.is_some(),
+        );
+
         if self.paused() || g.imgui_state.paused {
             return Ok(());
         }
 
-        self.action_duration += timer::delta(ctx);
+        let actions = self.input.actions();
+        self.actions(&actions);
 
+        self.action_duration += timer::delta(ctx);
         while let Some(action) = self.actions.pop_front() {
-            if self.paused() {
+            if self.paused() || self.piece_entering.is_some() {
                 self.action_duration = Duration::new(0, 0);
                 continue;
             }
@@ -411,7 +446,13 @@ impl Gameplay {
         if self.interactive {
             if self.piece.locking() > Duration::from_millis(g.settings.gameplay.lock_delay.into()) {
                 self.action(Action::LockPiece, true);
-                log::trace!("locking");
+            } else if let Some(entering) = self.piece_entering.as_mut() {
+                *entering += timer::delta(ctx);
+
+                if *entering >= Duration::from_millis(g.settings.gameplay.entry_delay.into()) {
+                    self.piece_entering = None;
+                    self.piece_visible = true;
+                }
             } else {
                 self.falling += timer::delta(ctx);
 
@@ -470,7 +511,7 @@ impl Gameplay {
         self.stack
             .draw(ctx, position, &mut self.blocks, block_size)?;
 
-        if !self.game_over {
+        if self.piece_visible && !self.game_over {
             let alpha = if g.settings.gameplay.lock_delay > 0 {
                 1.0 - self.piece.locking().as_millis() as f32
                     / g.settings.gameplay.lock_delay as f32

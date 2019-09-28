@@ -30,7 +30,7 @@ pub struct Graphics {
 pub struct Gameplay {
     pub block_size: i32,
     pub ghost_piece: u32,
-    pub clear_delay: u32,
+    pub entry_delay: u32,
     pub lock_delay: u32,
     pub skin: String,
     pub stack_grid: bool,
@@ -84,7 +84,7 @@ impl Settings {
                 gameplay: Gameplay {
                     block_size: 43,
                     ghost_piece: 10,
-                    clear_delay: 0,
+                    entry_delay: 0,
                     lock_delay: 500,
                     skin: String::from("friends.png"),
                     stack_grid: true,
@@ -225,10 +225,10 @@ impl Settings {
                 Slider::new(im_str!(""), 16..=44).build(&ui, &mut self.gameplay.block_size);
                 id.pop(&ui);
 
-                ui.text(im_str!("Clear delay"));
+                ui.text(im_str!("Entry delay"));
                 ui.same_line(pos);
-                let id = ui.push_id(im_str!("clear_delay"));
-                Slider::new(im_str!(""), 0..=2000).build(&ui, &mut self.gameplay.clear_delay);
+                let id = ui.push_id(im_str!("entry_delay"));
+                Slider::new(im_str!(""), 0..=2000).build(&ui, &mut self.gameplay.entry_delay);
                 id.pop(&ui);
 
                 ui.text(im_str!("Lock delay"));

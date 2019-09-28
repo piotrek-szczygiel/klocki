@@ -67,7 +67,7 @@ impl Input {
         self
     }
 
-    pub fn update(&mut self, ctx: &Context, das: u32, arr: u32) {
+    pub fn update(&mut self, ctx: &Context, das: u32, arr: u32, paused: bool) {
         let das = Duration::from_millis(das.into());
         let arr = Duration::from_millis(arr.into());
 
@@ -99,8 +99,12 @@ impl Input {
 
             match self.key_activated[key].as_mut() {
                 None => {
-                    self.key_activated[key] = Some(zero);
-                    active = true;
+                    if paused {
+                        self.key_activated[key] = Some(das);
+                    } else {
+                        self.key_activated[key] = Some(zero);
+                        active = true;
+                    }
                 }
                 Some(key_activated) => {
                     *key_activated += dt;
@@ -108,8 +112,10 @@ impl Input {
                     if bind.repeat && *key_activated >= das {
                         match self.key_repeated[key].as_mut() {
                             None => {
-                                self.key_repeated[key] = Some(zero);
-                                active = true;
+                                if !paused {
+                                    self.key_repeated[key] = Some(zero);
+                                    active = true;
+                                }
                             }
                             Some(key_repeated) => {
                                 *key_repeated += dt;

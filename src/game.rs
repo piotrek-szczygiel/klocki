@@ -17,11 +17,9 @@ use ggez::{
 use rand::{thread_rng, RngCore};
 
 use crate::{
-    action::Action,
     gameplay::Gameplay,
     global::Global,
     imgui_wrapper::ImGuiWrapper,
-    input::Input,
     particles::ParticleAnimation,
     replay::{Replay, ReplayData},
     utils,
@@ -29,7 +27,6 @@ use crate::{
 
 pub struct Game {
     pub g: Global,
-    input: Input,
     gameplay: Gameplay,
     game_over: bool,
     background: Image,
@@ -45,20 +42,6 @@ pub struct Game {
 
 impl Game {
     pub fn new(ctx: &mut Context, mut g: Global) -> GameResult<Game> {
-        let mut input = Input::new();
-        input
-            .bind(KeyCode::Right, Action::MoveRight, true)
-            .bind(KeyCode::Left, Action::MoveLeft, true)
-            .bind(KeyCode::Down, Action::MoveDown, true)
-            .bind(KeyCode::Up, Action::RotateClockwise, false)
-            .bind(KeyCode::X, Action::RotateClockwise, false)
-            .bind(KeyCode::Z, Action::RotateCounterClockwise, false)
-            .bind(KeyCode::Space, Action::HardDrop, false)
-            .bind(KeyCode::LShift, Action::SoftDrop, false)
-            .bind(KeyCode::C, Action::HoldPiece, false)
-            .exclude(KeyCode::Right, KeyCode::Left)
-            .exclude(KeyCode::Left, KeyCode::Right);
-
         let mut replay = None;
         if let Some(path) = env::args().nth(1) {
             let path = PathBuf::from(path);
@@ -92,7 +75,6 @@ impl Game {
 
         let mut app = Game {
             g,
-            input,
             gameplay,
             game_over: false,
             background: Image::new(ctx, utils::path(ctx, "background.jpg"))?,
@@ -160,18 +142,11 @@ impl EventHandler for Game {
 
         let mut gameplay = &mut self.gameplay;
 
-        match &mut self.replay {
-            Some(replay) => {
-                if !replay.gameplay.paused() && !self.g.imgui_state.paused {
-                    replay.update(ctx);
-                }
-                gameplay = &mut replay.gameplay;
+        if let Some(replay) = &mut self.replay {
+            if !replay.gameplay.paused() && !self.g.imgui_state.paused {
+                replay.update(ctx);
             }
-            None => {
-                self.input
-                    .update(ctx, self.g.settings.input.das, self.g.settings.input.arr);
-                gameplay.actions(&self.input.actions());
-            }
+            gameplay = &mut replay.gameplay;
         }
 
         gameplay.update(ctx, &mut self.g, true)?;
