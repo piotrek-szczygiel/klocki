@@ -4,11 +4,10 @@ use std::{
 };
 
 use ggez::{
+    graphics::Align,
     graphics::{self, Color, DrawParam, Font, Scale, Text, TextFragment},
     nalgebra::{Point2, Vector2},
-    Context,
-    GameResult,
-    graphics::Align
+    Context, GameResult,
 };
 use rand::{rngs::StdRng, seq::SliceRandom, SeedableRng};
 

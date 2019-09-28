@@ -7,7 +7,6 @@ use ggez::{
 };
 
 use crate::{
-    popups::Popup,
     action::Action,
     bag::Bag,
     blocks::Blocks,
@@ -15,11 +14,12 @@ use crate::{
     holder::Holder,
     particles::Explosion,
     piece::Piece,
+    popups::Popup,
     popups::Popups,
     replay::ReplayData,
     score::Score,
     stack::{Locked, Stack},
-    utils
+    utils,
 };
 
 pub struct Gameplay {
@@ -393,6 +393,11 @@ impl Gameplay {
         self.action_duration += timer::delta(ctx);
 
         while let Some(action) = self.actions.pop_front() {
+            if self.paused() {
+                self.action_duration = Duration::new(0, 0);
+                continue;
+            }
+
             self.replay.add(action, self.action_duration);
             self.action_duration = Duration::new(0, 0);
 
@@ -466,8 +471,13 @@ impl Gameplay {
             .draw(ctx, position, &mut self.blocks, block_size)?;
 
         if !self.game_over {
-            let alpha = 1.0
-                - self.piece.locking().as_millis() as f32 / g.settings.gameplay.lock_delay as f32;
+            let alpha = if g.settings.gameplay.lock_delay > 0 {
+                1.0 - self.piece.locking().as_millis() as f32
+                    / g.settings.gameplay.lock_delay as f32
+            } else {
+                1.0
+            };
+
             self.piece.draw(
                 ctx,
                 position,

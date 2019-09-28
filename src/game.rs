@@ -168,11 +168,9 @@ impl EventHandler for Game {
                 gameplay = &mut replay.gameplay;
             }
             None => {
-                if !gameplay.stack.blocked() {
-                    self.input
-                        .update(ctx, self.g.settings.input.das, self.g.settings.input.arr);
-                    gameplay.actions(&self.input.actions());
-                }
+                self.input
+                    .update(ctx, self.g.settings.input.das, self.g.settings.input.arr);
+                gameplay.actions(&self.input.actions());
             }
         }
 
