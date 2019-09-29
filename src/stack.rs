@@ -321,10 +321,38 @@ impl Stack {
     }
 
     pub fn update(&mut self, ctx: &mut Context, g: &mut Global) -> GameResult {
-        if let Some(clearing) = &mut self.clearing {
+        if let Some(clearing) = self.clearing.as_mut() {
             clearing.current_duration += timer::delta(ctx);
 
             if clearing.current_duration >= clearing.max_duration {
+                let mut rng = rand::thread_rng();
+
+                for &y in &clearing.rows {
+                    for x in 0..self.width {
+                        let vx = self.randomizer.uniform_vx.sample(&mut rng);
+                        let vy = self.randomizer.normal_vy.sample(&mut rng);
+                        let vr = self.randomizer.uniform_vr.sample(&mut rng);
+                        let lifetime = Duration::from_millis(
+                            self.randomizer.uniform_lifetime.sample(&mut rng),
+                        );
+
+                        let block_id = self.grid[y as usize][x as usize];
+
+                        if block_id != 0 {
+                            self.destroyed_blocks.push(DestroyedBlock {
+                                block_id,
+                                position: Vector2::new(x as f32, (y - self.vanish) as f32),
+                                speed: Vector2::new(vx, vy),
+                                rotation: 0.0,
+                                rotation_speed: vr,
+                                visible: Duration::new(0, 0),
+                                lifetime,
+                                alpha: 1.0,
+                            });
+                        }
+                    }
+                }
+
                 for &y in &clearing.rows {
                     for y in (1..=y).rev() {
                         for x in 0..self.width {
@@ -389,9 +417,10 @@ impl Stack {
             if let Some(clearing) = &self.clearing {
                 let y = self.vanish + y - 1;
                 if clearing.rows.contains(&y) {
-                    alpha *= 1.0
-                        - clearing.current_duration.as_secs_f32()
-                            / clearing.max_duration.as_secs_f32();
+                    let ratio = clearing.current_duration.as_secs_f32()
+                        / clearing.max_duration.as_secs_f32();
+
+                    alpha *= 1.0 - ratio;
                 }
             }
 
@@ -433,29 +462,6 @@ impl Stack {
         Ok(())
     }
 
-    fn generate_destroyed_block(
-        &mut self,
-        x: i32,
-        y: i32,
-        speed: Vector2<f32>,
-        rotation_speed: f32,
-        lifetime: Duration,
-    ) {
-        let block_id = self.grid[y as usize][x as usize];
-        if block_id != 0 {
-            self.destroyed_blocks.push(DestroyedBlock {
-                block_id,
-                position: Vector2::new(x as f32, (y - self.vanish) as f32),
-                speed,
-                rotation: 0.0,
-                rotation_speed,
-                visible: Duration::new(0, 0),
-                lifetime,
-                alpha: 1.0,
-            });
-        }
-    }
-
     fn clear_full_rows(&mut self, clear_delay: Duration) -> i32 {
         let rows = self.get_full_rows();
         let length = rows.len();
@@ -489,20 +495,6 @@ impl Stack {
     }
 
     fn clear_rows(&mut self, rows: &[i32], clear_delay: Duration) {
-        self.update_grid = true;
-        let mut rng = rand::thread_rng();
-
-        for &row in rows {
-            for x in 0..self.width {
-                let vx = self.randomizer.uniform_vx.sample(&mut rng);
-                let vy = self.randomizer.normal_vy.sample(&mut rng);
-                let vr = self.randomizer.uniform_vr.sample(&mut rng);
-                let lifetime =
-                    Duration::from_millis(self.randomizer.uniform_lifetime.sample(&mut rng));
-                self.generate_destroyed_block(x, row, Vector2::new(vx, vy), vr, lifetime);
-            }
-        }
-
         self.clearing = Some(Clearing {
             rows: Vec::from(rows),
             current_duration: Duration::new(0, 0),

@@ -53,12 +53,14 @@ impl Blocks {
         let scale = size as f32 / self.tileset_size as f32;
         let scale = Vector2::new(scale, scale);
 
+        let color = Color::new(1.0, 1.0, 1.0, alpha);
+
         self.batch.add(
             DrawParam::new()
                 .src(self.rects[block_id])
                 .dest(dest)
                 .scale(scale)
-                .color(Color::new(1.0, 1.0, 1.0, alpha)),
+                .color(color),
         );
     }
 

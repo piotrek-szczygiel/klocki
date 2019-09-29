@@ -93,7 +93,7 @@ impl Settings {
                     stack_outline: true,
                 },
                 audio: Audio {
-                    music_volume: 10,
+                    music_volume: 50,
                     sfx_volume: 50,
                 },
                 input: Input { das: 133, arr: 33 },
@@ -230,7 +230,7 @@ impl Settings {
                 ui.text(im_str!("Entry delay"));
                 ui.same_line(pos);
                 let id = ui.push_id(im_str!("entry_delay"));
-                Slider::new(im_str!(""), 0..=1000).build(&ui, &mut self.gameplay.entry_delay);
+                Slider::new(im_str!(""), 0..=500).build(&ui, &mut self.gameplay.entry_delay);
                 id.pop(&ui);
 
                 ui.text(im_str!("Lock delay"));
@@ -242,7 +242,7 @@ impl Settings {
                 ui.text(im_str!("Clear delay"));
                 ui.same_line(pos);
                 let id = ui.push_id(im_str!("clear_delay"));
-                Slider::new(im_str!(""), 0..=1000).build(&ui, &mut self.gameplay.clear_delay);
+                Slider::new(im_str!(""), 0..=500).build(&ui, &mut self.gameplay.clear_delay);
                 id.pop(&ui);
 
                 ui.text(im_str!("Skin"));
