@@ -233,7 +233,7 @@ impl EventHandler for Game {
 
     fn mouse_button_down_event(
         &mut self,
-        _ctx: &mut Context,
+        ctx: &mut Context,
         button: MouseButton,
         _x: f32,
         _y: f32,
@@ -243,6 +243,41 @@ impl EventHandler for Game {
             button == MouseButton::Right,
             button == MouseButton::Middle,
         ));
+
+        if self.g.imgui_state.click_to_place {
+            if button != MouseButton::Left {
+                return;
+            }
+
+            let mouse = utils::mouse_position_coords(ctx);
+            let screen = graphics::screen_coordinates(ctx);
+            let position_center = Vector2::new(
+                (screen.w
+                    - (self.gameplay.stack.width * self.g.settings.gameplay.block_size) as f32)
+                    / 2.0,
+                (screen.h
+                    - (self.gameplay.stack.height * self.g.settings.gameplay.block_size) as f32)
+                    / 2.0,
+            );
+
+            let position = mouse - position_center;
+            let x = position.x / self.g.settings.gameplay.block_size as f32;
+            let y = position.y / self.g.settings.gameplay.block_size as f32;
+
+            if x < 0.0 || y < 0.0 {
+                return;
+            }
+
+            let x = x as i32;
+            let y = y as i32;
+
+            if x >= self.gameplay.stack.width || y >= self.gameplay.stack.height {
+                return;
+            }
+
+            let y = y + self.gameplay.stack.vanish;
+            self.gameplay.stack.place_random(x as usize, y as usize);
+        }
     }
 
     fn mouse_button_up_event(

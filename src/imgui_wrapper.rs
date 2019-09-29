@@ -21,6 +21,7 @@ struct MouseState {
 #[derive(Default)]
 pub struct ImGuiState {
     pub paused: bool,
+    pub click_to_place: bool,
     pub restart: bool,
     pub game_over: bool,
     pub debug_t_spin_tower: bool,
@@ -197,6 +198,11 @@ impl ImGuiWrapper {
                         ui.separator();
 
                         ui.checkbox(im_str!("Paused"), &mut g.imgui_state.paused);
+
+                        ui.checkbox(
+                            im_str!("Click to place block"),
+                            &mut g.imgui_state.click_to_place,
+                        );
 
                         g.imgui_state.restart = ui.button(im_str!("Restart"), [0.0, 0.0]);
 

@@ -109,13 +109,13 @@ impl Popup {
 
         self.alpha = 1.0;
         self.hide = 0.0;
-        if ratio >= 0.5 {
-            self.alpha = 1.0 - (ratio - 0.5) * 6.0;
+        if ratio >= 0.25 {
+            self.alpha = 1.0 - (ratio - 0.25) * 6.0;
             if self.alpha < 0.0 {
                 self.alpha = 0.0;
             }
 
-            self.hide = (ratio - 0.5) * 2.0;
+            self.hide = (ratio - 0.25) * 4.0;
 
             true
         } else {
@@ -175,8 +175,8 @@ impl Popups {
 
     pub fn lock(&mut self, rows: i32, t_spin: bool, btb: bool, combo: Option<i32>, delay: u64) {
         let mut lifetime = delay;
-        if lifetime < 500 {
-            lifetime = 500;
+        if lifetime < 750 {
+            lifetime = 750;
         }
 
         let mut popup = Popup::new(Duration::from_millis(lifetime * 2));

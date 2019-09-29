@@ -5,13 +5,13 @@ use ggez::{
     nalgebra::{Point2, Vector2},
     timer, Context, GameResult,
 };
+use rand::Rng;
 use rand_distr::{Distribution, Normal, Uniform};
 
 use crate::{blocks::Blocks, global::Global, piece::Piece, utils};
 
 struct Clearing {
     rows: Vec<i32>,
-    cleared: bool,
     current_duration: Duration,
     max_duration: Duration,
 }
@@ -85,11 +85,15 @@ impl Stack {
         }
     }
 
+    pub fn place_random(&mut self, x: usize, y: usize) {
+        self.grid[y][x] = rand::thread_rng().gen_range(1, 8);
+    }
+
     pub fn build_grid(&mut self, ctx: &mut Context, grid: bool, outline: bool) -> GameResult {
         let mut grid_mesh = MeshBuilder::new();
 
         const GRID_COLOR: Color = Color::new(0.1, 0.11, 0.12, 0.5);
-        const OUTLINE_COLOR: Color = Color::new(0.8, 0.9, 1.0, 0.8);
+        const OUTLINE_COLOR: Color = Color::new(0.7, 0.8, 0.9, 0.8);
         const BACKGROUND_COLOR: Color = Color::new(0.02, 0.03, 0.04, 0.95);
 
         const GRID_WIDTH: f32 = 1.0;
@@ -180,23 +184,6 @@ impl Stack {
                         )?;
                     }
 
-                    if down {
-                        grid_mesh.line(
-                            &[
-                                Point2::new(
-                                    (x * self.block_size) as f32 - corner,
-                                    ((y + 1) * self.block_size) as f32,
-                                ),
-                                Point2::new(
-                                    ((x + 1) * self.block_size) as f32 + corner,
-                                    ((y + 1) * self.block_size) as f32,
-                                ),
-                            ],
-                            OUTLINE_WIDTH,
-                            OUTLINE_COLOR,
-                        )?;
-                    }
-
                     if left {
                         grid_mesh.line(
                             &[
@@ -207,6 +194,23 @@ impl Stack {
                                 Point2::new(
                                     (x * self.block_size) as f32,
                                     ((y + 1) * self.block_size) as f32 + corner,
+                                ),
+                            ],
+                            OUTLINE_WIDTH,
+                            OUTLINE_COLOR,
+                        )?;
+                    }
+
+                    if down {
+                        grid_mesh.line(
+                            &[
+                                Point2::new(
+                                    (x * self.block_size) as f32 - corner,
+                                    ((y + 1) * self.block_size) as f32,
+                                ),
+                                Point2::new(
+                                    ((x + 1) * self.block_size) as f32 + corner,
+                                    ((y + 1) * self.block_size) as f32,
                                 ),
                             ],
                             OUTLINE_WIDTH,
@@ -235,14 +239,14 @@ impl Stack {
         }
 
         grid_mesh.rectangle(
-            DrawMode::stroke(OUTLINE_WIDTH),
+            DrawMode::stroke(3.0),
             Rect::new(
                 0.0,
                 0.0,
                 (self.width * self.block_size) as f32,
                 (self.height * self.block_size) as f32,
             ),
-            OUTLINE_COLOR,
+            Color::new(0.8, 0.9, 1.0, 0.8),
         );
 
         self.grid_mesh = Some((grid_mesh.build(ctx)?, self.block_size));
@@ -316,18 +320,9 @@ impl Stack {
         self.clearing.is_some()
     }
 
-    pub fn update(&mut self, ctx: &mut Context, g: &mut Global, sfx: bool) -> GameResult {
+    pub fn update(&mut self, ctx: &mut Context, g: &mut Global) -> GameResult {
         if let Some(clearing) = &mut self.clearing {
             clearing.current_duration += timer::delta(ctx);
-
-            if !clearing.cleared {
-                clearing.cleared = true;
-                for &y in &clearing.rows {
-                    for x in 0..self.width {
-                        self.grid[y as usize][x as usize] = 0;
-                    }
-                }
-            }
 
             if clearing.current_duration >= clearing.max_duration {
                 for &y in &clearing.rows {
@@ -337,10 +332,6 @@ impl Stack {
                                 self.grid[y as usize - 1][x as usize];
                         }
                     }
-                }
-
-                if sfx {
-                    g.sfx.play("linefall");
                 }
 
                 self.clearing = None;
@@ -393,6 +384,17 @@ impl Stack {
         let alpha = 0.5;
 
         for y in 0..=self.height {
+            let mut alpha = alpha;
+
+            if let Some(clearing) = &self.clearing {
+                let y = self.vanish + y - 1;
+                if clearing.rows.contains(&y) {
+                    alpha *= 1.0
+                        - clearing.current_duration.as_secs_f32()
+                            / clearing.max_duration.as_secs_f32();
+                }
+            }
+
             for x in 0..self.width {
                 let block = self.grid[(self.vanish + y - 1) as usize][x as usize];
                 if block == 0 {
@@ -422,7 +424,7 @@ impl Stack {
                     .dest(position + block.position * block_size as f32)
                     .rotation(block.rotation)
                     .offset(Point2::new(0.5, 0.5))
-                    .color(Color::new(1.0, 1.0, 1.0, alpha * block.alpha)),
+                    .color(Color::new(1.0, 1.0, 1.0, 0.5 * block.alpha)),
             );
         }
 
@@ -503,7 +505,6 @@ impl Stack {
 
         self.clearing = Some(Clearing {
             rows: Vec::from(rows),
-            cleared: false,
             current_duration: Duration::new(0, 0),
             max_duration: clear_delay,
         });
@@ -535,7 +536,7 @@ impl Stack {
         self.clear();
 
         for (y, x) in bricks {
-            self.grid[y][x] = 5;
+            self.place_random(x, y);
         }
     }
 
@@ -576,11 +577,9 @@ impl Stack {
         }
 
         self.clear();
-        let mut rng = rand::thread_rng();
-        let uniform = Uniform::new(1, 8);
 
         for (y, x) in bricks {
-            self.grid[y][x] = uniform.sample(&mut rng);
+            self.place_random(x, y);
         }
     }
 }

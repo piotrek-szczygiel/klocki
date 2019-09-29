@@ -24,6 +24,13 @@ use crate::{
     utils,
 };
 
+#[derive(PartialEq)]
+enum Countdown {
+    Waiting,
+    Ready,
+    Finished,
+}
+
 pub struct Gameplay {
     interactive: bool,
     input: Input,
@@ -50,7 +57,7 @@ pub struct Gameplay {
     blocks: Blocks,
 
     explosion: Option<Explosion>,
-    countdown: Option<i32>,
+    countdown: Countdown,
     countdown_switch: Duration,
 }
 
@@ -110,7 +117,7 @@ impl Gameplay {
             font,
             blocks,
             explosion: None,
-            countdown: Some(4),
+            countdown: Countdown::Waiting,
             countdown_switch: Duration::new(0, 0),
         })
     }
@@ -164,7 +171,7 @@ impl Gameplay {
     }
 
     pub fn paused(&self) -> bool {
-        self.game_over || self.countdown.is_some() || self.stack.blocked()
+        self.game_over || self.countdown != Countdown::Finished || self.stack.blocked()
     }
 
     fn process_action(&mut self, g: &mut Global, action: Action, sfx: bool) -> bool {
@@ -187,7 +194,7 @@ impl Gameplay {
             Action::LockPiece => {
                 match self.stack.lock(
                     &self.piece,
-                    Duration::from_millis(g.settings.gameplay.entry_delay.into()),
+                    Duration::from_millis(g.settings.gameplay.clear_delay.into()),
                 ) {
                     Locked::Collision => {
                         if self.interactive {
@@ -323,19 +330,11 @@ impl Gameplay {
                 if rows > 0 {
                     self.reset_fall();
                     self.score.soft_drop(rows);
-
-                    if sfx {
-                        g.sfx.play("softdrop");
-                    }
                 }
             }
             Action::HardDrop => {
                 let rows = self.piece.fall(&self.stack);
                 self.score.hard_drop(rows);
-
-                if sfx && rows > 0 {
-                    g.sfx.play("harddrop");
-                }
 
                 if self.interactive {
                     self.action(Action::LockPiece, true);
@@ -362,33 +361,32 @@ impl Gameplay {
             self.blocks = Blocks::new(g.settings.tileset(ctx, &g.settings_state)?);
         }
 
-        if let Some(countdown) = self.countdown.as_mut() {
-            if *countdown == 4 {
-                self.countdown_switch = Duration::from_secs(1);
-            }
-
+        if self.countdown != Countdown::Finished {
             self.countdown_switch += timer::delta(ctx);
             if self.countdown_switch >= Duration::from_secs(1) {
                 self.countdown_switch = Duration::new(0, 0);
-                *countdown -= 1;
-
-                let mut text = countdown.to_string();
-
-                if sfx {
-                    if *countdown == 0 {
-                        g.sfx.play("go");
-                    } else {
-                        g.sfx.play("countdown");
-                    }
-                }
-
-                if *countdown == 0 {
-                    self.countdown = None;
-                    text = String::from("Go!");
-                }
 
                 let mut popup = Popup::new(Duration::from_secs(2));
-                popup.add(&text, Color::new(0.8, 0.9, 1.0, 1.0), 4.0);
+                const COLOR: Color = Color::new(0.8, 0.9, 1.0, 1.0);
+
+                match self.countdown {
+                    Countdown::Waiting => {
+                        self.countdown = Countdown::Ready;
+                        popup.add("Ready", COLOR, 4.0);
+                        if sfx {
+                            g.sfx.play("ready");
+                        }
+                    }
+                    Countdown::Ready => {
+                        self.countdown = Countdown::Finished;
+                        popup.add("Go", COLOR, 4.0);
+                        if sfx {
+                            g.sfx.play("go");
+                        }
+                    }
+                    _ => (),
+                }
+
                 self.popups.add(popup);
             }
         }
@@ -400,7 +398,7 @@ impl Gameplay {
             g.settings.gameplay.block_size as f32,
         )?;
 
-        self.stack.update(ctx, g, sfx)?;
+        self.stack.update(ctx, g)?;
 
         self.input.update(
             ctx,
@@ -466,15 +464,16 @@ impl Gameplay {
     pub fn draw(&mut self, ctx: &mut Context, g: &Global, position: Point2<f32>) -> GameResult<()> {
         let block_size = g.settings.gameplay.block_size;
 
-        let ui_block_size = block_size / 2;
+        let next_block_size = block_size / 2;
+        let holder_block_size = block_size * 3 / 4;
         let ui_color = Color::new(0.8, 0.9, 1.0, 0.8);
         let ui_scale = Scale::uniform(block_size as f32);
 
         self.holder.draw(
             ctx,
-            position + Vector2::new(-6.0 * ui_block_size as f32, 0.0),
+            position + Vector2::new(-6.0 * holder_block_size as f32, 0.0),
             &mut self.blocks,
-            ui_block_size,
+            holder_block_size,
             ui_color,
             self.font,
         )?;
@@ -483,7 +482,7 @@ impl Gameplay {
             ctx,
             position + Vector2::new((self.stack.width * block_size) as f32, 0.0),
             &mut self.blocks,
-            ui_block_size,
+            next_block_size,
             ui_color,
             self.font,
         )?;
@@ -492,7 +491,7 @@ impl Gameplay {
             ctx,
             position
                 + Vector2::new(
-                    (block_size * self.stack.width) as f32 + ui_block_size as f32,
+                    (block_size * self.stack.width) as f32 + next_block_size as f32,
                     (block_size * self.stack.height) as f32 - ui_scale.y * 3.0,
                 ),
             ui_color,
