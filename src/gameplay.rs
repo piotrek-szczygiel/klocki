@@ -1,8 +1,8 @@
 use std::{collections::VecDeque, time::Duration};
 
 use ggez::{
-    graphics::{Color, Font, Scale},
-    input::keyboard::KeyCode,
+    graphics::{self, Color, Font, Scale},
+    input::{keyboard::KeyCode, mouse},
     nalgebra::{Point2, Vector2},
     timer, Context, GameResult,
 };
@@ -361,6 +361,10 @@ impl Gameplay {
             self.blocks = Blocks::new(g.settings.tileset(ctx, &g.settings_state)?);
         }
 
+        if g.imgui_state.debug_click_to_place {
+            self.debug_click_to_place(ctx, g);
+        }
+
         if self.countdown != Countdown::Finished {
             self.countdown_switch += timer::delta(ctx);
             if self.countdown_switch >= Duration::from_secs(1) {
@@ -542,5 +546,36 @@ impl Gameplay {
             .draw(ctx, position, (block_size * self.stack.height) as f32)?;
 
         Ok(())
+    }
+
+    fn debug_click_to_place(&mut self, ctx: &mut Context, g: &Global) {
+        if !mouse::button_pressed(ctx, mouse::MouseButton::Left) {
+            return;
+        }
+
+        let mouse = utils::mouse_position_coords(ctx);
+        let screen = graphics::screen_coordinates(ctx);
+        let position_center = Vector2::new(
+            (screen.w - (self.stack.width * g.settings.gameplay.block_size) as f32) / 2.0,
+            (screen.h - (self.stack.height * g.settings.gameplay.block_size) as f32) / 2.0,
+        );
+
+        let position = mouse - position_center;
+        let x = position.x / g.settings.gameplay.block_size as f32;
+        let y = position.y / g.settings.gameplay.block_size as f32;
+
+        if x < 0.0 || y < 0.0 {
+            return;
+        }
+
+        let x = x as i32;
+        let y = y as i32;
+
+        if x >= self.stack.width || y >= self.stack.height {
+            return;
+        }
+
+        let y = y + self.stack.vanish;
+        self.stack.place_random(x as usize, y as usize);
     }
 }
